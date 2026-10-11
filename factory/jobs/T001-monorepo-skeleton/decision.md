@@ -17,3 +17,7 @@ Reason: AC 3 ("CI runs on PRs and is green") can only be confirmed by a human af
 4. Minor: `eslint@9.39.5` prints an npm deprecation notice (still `^9`, as the spec asks). The dynamic `import('firebase-admin')` gap in core is known and out of scope.
 
 If items 1–3 are fine, this is ready to merge. The diff matches spec.md, with one justified deviation (`tsBuildInfoFile` in each package's `tsconfig.json`).
+
+---
+
+**Approved by human** (2026-10-11T17:42:41Z) via `/factory approve T001`. The human accepts: CI green on GitHub to be confirmed after first push; dev-only npm audit advisories from the vitest 3.2 pin; the two unexplained tooling test edits (reviewed by code-reviewer as harmless).
