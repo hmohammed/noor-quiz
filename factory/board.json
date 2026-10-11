@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-11T17:44:03Z",
+  "updatedAt": "2026-10-11T18:02:34Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -35,10 +35,28 @@
       "reason": null,
       "startedAt": "2026-10-11T17:20:40Z",
       "finishedAt": "2026-10-11T17:44:03Z"
+    },
+    {
+      "id": "T002",
+      "slug": "local-stack",
+      "title": "Local stack: emulators, Hono health endpoint, Vite home page",
+      "epic": "E00",
+      "phase": "P1",
+      "tags": [],
+      "branch": "factory/T002-local-stack",
+      "worktree": null,
+      "builderAgent": null,
+      "stage": "spec",
+      "round": 1,
+      "reviewers": [],
+      "reviews": {},
+      "history": [],
+      "reason": null,
+      "startedAt": "2026-10-11T18:02:34Z",
+      "finishedAt": null
     }
   ],
   "queue": [
-    "T002",
     "T003"
   ],
   "blocked": [
