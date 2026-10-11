@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-11T17:42:41Z",
+  "updatedAt": "2026-10-11T17:44:03Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -19,7 +19,7 @@
       "branch": "factory/T001-monorepo-skeleton",
       "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-a86b7040487255a46",
       "builderAgent": "a86b7040487255a46",
-      "stage": "merge-queue",
+      "stage": "done",
       "round": 1,
       "reviewers": [
         "ux",
@@ -34,10 +34,13 @@
       "history": [],
       "reason": null,
       "startedAt": "2026-10-11T17:20:40Z",
-      "finishedAt": null
+      "finishedAt": "2026-10-11T17:44:03Z"
     }
   ],
-  "queue": [],
+  "queue": [
+    "T002",
+    "T003"
+  ],
   "blocked": [
     {
       "id": "T005",
