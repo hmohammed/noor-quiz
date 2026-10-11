@@ -6,3 +6,6 @@ docs
 factory
 .claude
 *.md
+build
+playwright-report
+test-results

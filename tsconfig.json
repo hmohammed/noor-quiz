@@ -6,6 +6,7 @@
     { "path": "packages/testkit" },
     { "path": "apps/api" },
     { "path": "apps/web" },
+    { "path": "apps/web/tsconfig.e2e.json" },
     { "path": "apps/workers" },
     { "path": "tooling" }
   ]

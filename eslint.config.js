@@ -27,6 +27,9 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/coverage/**',
+      '**/build/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       'docs/**',
       'factory/**',
       '.claude/**',
@@ -34,6 +37,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // Plain Node scripts (e.g. apps/api/scripts/build-function.mjs).
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+  },
   {
     files: ['packages/core/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': ['error', coreBanned] },

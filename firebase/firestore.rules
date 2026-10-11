@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Deny everything until real rules and rules tests land (later task).
+// The browser never writes to Firestore (AGENT.md rule 3).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -58,7 +58,7 @@ Skills: `deploy-release`, `api-endpoint`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- T002: function `api` in region `europe-west1`; emulator URL `http://127.0.0.1:5001/demo-noor/europe-west1/api/<path>`. Vite proxies `/v1` → `/demo-noor/europe-west1/api/v1`. The bundle lives in `apps/api/build/` (gitignored, `main` of `@noor/api`) and is built by esbuild (`apps/api/scripts/build-function.mjs`), not `tsc`; contracts/zod/hono are bundled, firebase-functions/admin stay external. Playwright is pinned to exactly `1.51.1` (chromium revision 1161, already cached locally). T003: replace `createApp({ version })` options with the composition root. T004: add Hosting rewrites `/v1/**` → function `api`, plus the `test:emulator` and `deploy:staging` scripts (marked "not yet — T004" in AGENT.md).
 
 ## T003
 

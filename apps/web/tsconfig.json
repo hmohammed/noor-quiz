@@ -5,7 +5,10 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": []
+    "types": [],
+    "jsx": "react-jsx",
+    "resolveJsonModule": true
   },
-  "include": ["src"]
+  "include": ["src", "src/**/*.json"],
+  "references": [{ "path": "../../packages/contracts" }]
 }

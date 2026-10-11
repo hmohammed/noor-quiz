@@ -1,0 +1,5 @@
+{
+  "home.api.checking": "Checking API…",
+  "home.api.ok": "API ok",
+  "home.api.unreachable": "API unreachable"
+}

@@ -70,16 +70,17 @@ response                                      adapter (apps/api/src/adapters/*)
 
 Use cases are plain functions: `submitAnswer(deps, input)` where `deps` holds ports. Routes wire real adapters; tests wire fakes.
 
-## Commands (created by task T001/T002)
+## Commands (root `package.json` scripts; later tasks add the ones marked "not yet")
 
 ```
 npm install                 # all workspaces
-npm run dev                 # emulators + api + web
+npm run dev                 # emulators (demo-noor) + api bundle watch + web
 npm test                    # unit tests, all workspaces
-npm run test:emulator       # adapter + firestore rules tests (needs Firebase emulators)
+npm run test:emulator       # adapter + firestore rules tests (needs Firebase emulators)  # not yet — T004
 npm run test:e2e            # Playwright against local stack
 npm run lint && npm run typecheck
-npm run deploy:staging      # CI normally does this
+npm run build               # api function bundle + web
+npm run deploy:staging      # CI normally does this  # not yet — T004
 ```
 
 If a command does not exist yet, the task that needs it creates it.

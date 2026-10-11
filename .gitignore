@@ -14,3 +14,4 @@ test-results/
 .claude/worktrees/
 .DS_Store
 *.tsbuildinfo
+build/

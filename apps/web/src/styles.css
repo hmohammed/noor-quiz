@@ -1,0 +1,43 @@
+/* Logical properties only (RTL-ready): no left/right. */
+:root {
+  --color-bg: #fbfaf7;
+  --color-text: #1d2521;
+  --color-muted: #5b6660;
+  --color-ok: #1f7a4d;
+  --color-error: #a8322d;
+  --space-2: 0.5rem;
+  --space-4: 1rem;
+  --space-8: 2rem;
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Arabic',
+    'Noto Sans Ethiopic', sans-serif;
+
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-inline-size: 40rem;
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+  padding-block: var(--space-8);
+}
+
+.api-status {
+  margin-block: var(--space-2);
+  color: var(--color-muted);
+}
+
+.api-status--ok {
+  color: var(--color-ok);
+}
+
+.api-status--unreachable {
+  color: var(--color-error);
+}
