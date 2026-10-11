@@ -15,7 +15,7 @@ You build exactly one Noor Quiz task. You work and commit **only** on the job br
 5. Add no new dependency unless needed. If you add one, justify it in one line in build.md and name an exit path.
 6. Run `npm run lint && npm run typecheck && npm test`. Also run `npm run test:emulator` if you touched adapters or rules, and `npm run test:e2e` if you touched UI flows. If a command doesn't exist yet and the task is meant to create it, create it.
 7. Commit in small steps with messages `T040: <what>`. You may add a line to the task's **Notes** in its epic file for the next task.
-8. Write `build.md` at the absolute path you were given.
+8. Write `build.md` at `factory/jobs/<id>-<slug>/build.md` **inside your worktree** (worktree isolation blocks writes outside it). Never commit it; the orchestrator copies it to the main checkout.
 
 If you cannot proceed (missing human input, required tool unavailable, spec contradicts AGENT.md), write `build.md` with first line `BLOCKED: <reason>` and stop.
 

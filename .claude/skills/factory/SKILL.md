@@ -98,7 +98,7 @@ Write the remaining READY task ids, in order, to `board.json` `queue`.
 Stages in `board.json`: `spec → build → review → approve → merge-queue → done | needs-human | split`.
 Update `board.json` at **every** transition and whenever a review verdict lands, so the dashboard stays live.
 
-Below, `JOB` is the absolute path of `factory/jobs/<id>-<slug>/` in this (main) checkout. Agents in worktrees write there by absolute path.
+Below, `JOB` is the absolute path of `factory/jobs/<id>-<slug>/` in this (main) checkout. Agents without isolation write there by absolute path. The builder runs in a worktree and **cannot** write outside it: it writes `factory/jobs/<id>-<slug>/build.md` inside its worktree (never committed), and you copy that file to `JOB/build.md` and delete the worktree copy.
 
 ### 1 · spec
 
@@ -111,9 +111,9 @@ Spawn `spec-writer` (no isolation):
 ### 2 · build
 
 Spawn `builder` with `isolation: "worktree"`, named `builder-T040` (if the Agent tool has no name field, store the returned agent id in the job's `builderAgent`):
-> Job T040, round 1. Spec: `JOB/spec.md`. Task: `JOB/task.md`. Create and work on branch `factory/T040-submit-mcq` in your worktree. Write `JOB/build.md`.
+> Job T040, round 1. Spec: `JOB/spec.md`. Task: `JOB/task.md`. Create and work on branch `factory/T040-submit-mcq` in your worktree. Write `factory/jobs/T040-submit-mcq/build.md` inside your worktree; do not commit it.
 
-When it returns, read `JOB/build.md` and record `branch` and `worktree` (from its header) in `board.json`.
+When it returns, copy its build.md to `JOB/build.md` (after every round), read it and record `branch` and `worktree` (from its header) in `board.json`.
 - First line `BLOCKED: …` → `stage: "needs-human"`, `reason` = that line.
 - Otherwise → **review**.
 
@@ -141,7 +141,7 @@ As each one finishes, read the first line of its file and set `reviews.<key>`. T
 
 - All `PASS` → **approve**.
 - Any `CHANGES` and `round < 3`: push `{round, reviews}` onto `history`, then `round += 1` and `stage: "build"`. Resume the same builder with SendMessage:
-  > Round N reviews are in `JOB/round-N/`. Fix only what they ask, run the checks again, commit, and append a `## Round N+1` section to `JOB/build.md`.
+  > Round N reviews are in `JOB/round-N/`. Fix only what they ask, run the checks again, commit, and append a `## Round N+1` section to your worktree's build.md. (Copy the current `JOB/build.md` back into the worktree first if you deleted it.)
 
   Then run a new review round in `round-(N+1)/`, re-selecting reviewers from the new diff.
 - Any `CHANGES` after round 3 (2 fix rounds used) → `stage: "needs-human"`, `reason: "still CHANGES after 2 fix rounds"`.
