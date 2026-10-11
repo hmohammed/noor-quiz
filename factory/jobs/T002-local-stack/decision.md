@@ -44,3 +44,7 @@ Reason: Every gate passes, but the branch knowingly adds 21 new npm audit adviso
    - `apps/web/dist` is shared by `tsc -b` and `vite build`.
 
 If item 1 is acceptable, this is ready to merge. The diff matches spec.md. The four deviations in build.md (discovery timeout, `src/**/*.json` include, `node:url` import, Playwright timeouts and graceful shutdown) are each explained, and the code reviewer accepted them.
+
+---
+
+**Approved by human** (2026-10-11T19:13:52Z) via `/factory approve T002`. The human accepts: the npm audit increase (incl. shipped uuid 9.0.1 via firebase-admin and the @playwright/test 1.51.1 pin advisory) — to be addressed in T004 before the first deploy/CI browser download; the emulator cache changes in ~/.cache/firebase/emulators. E2E is re-run independently in the merge step.
