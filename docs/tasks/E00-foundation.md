@@ -31,6 +31,8 @@ Skills: `deploy-release`
 
 _(implementer adds notes for the next task here)_
 
+- T001: `vite` is pinned `^6` and `vitest` `~3.2` so everything runs on local Node 20.18 (CI uses `.nvmrc` = 22). Upgrading to Vite 7 / Vitest 4 needs Node >= 20.19 locally and must raise `engines.node`. That upgrade also clears the open `npm audit` advisories in vitest/tinypool (dev-only). Workspaces are source-first (`exports: ./src/index.ts`), so no build step is needed for tests. `no-restricted-imports` does not catch dynamic `import('firebase-admin')` in core (known gap).
+
 ## T002
 
 **Local stack: emulators, Hono health endpoint, Vite home page**

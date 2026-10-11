@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/contracts" },
+    { "path": "packages/testkit" },
+    { "path": "apps/api" },
+    { "path": "apps/web" },
+    { "path": "apps/workers" },
+    { "path": "tooling" }
+  ]
+}
