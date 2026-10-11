@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-11T18:02:34Z",
+  "updatedAt": "2026-10-11T19:11:48Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -44,14 +44,34 @@
       "phase": "P1",
       "tags": [],
       "branch": "factory/T002-local-stack",
-      "worktree": null,
-      "builderAgent": null,
-      "stage": "spec",
-      "round": 1,
-      "reviewers": [],
-      "reviews": {},
-      "history": [],
-      "reason": null,
+      "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-ad2a520d7a38d2ed0",
+      "builderAgent": "ad2a520d7a38d2ed0",
+      "stage": "needs-human",
+      "round": 2,
+      "reviewers": [
+        "security",
+        "ux",
+        "ui",
+        "code"
+      ],
+      "reviews": {
+        "security": "PASS",
+        "ux": "PASS",
+        "ui": "PASS",
+        "code": "PASS"
+      },
+      "history": [
+        {
+          "round": 1,
+          "reviews": {
+            "security": "PASS",
+            "ux": "CHANGES",
+            "ui": "PASS",
+            "code": "PASS"
+          }
+        }
+      ],
+      "reason": "npm audit 3\u219224 (shipped uuid 9.0.1 via firebase-admin; playwright 1.51.1 pin advisory); emulator cache changed outside repo",
       "startedAt": "2026-10-11T18:02:34Z",
       "finishedAt": null
     }
