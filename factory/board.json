@@ -1,0 +1,14 @@
+{
+  "maxParallel": 2,
+  "stopping": false,
+  "updatedAt": "2026-10-11T00:00:00Z",
+  "gates": { "P1": "closed", "P2": "closed", "P3": "closed", "P4": "closed" },
+  "jobs": [],
+  "queue": ["T001"],
+  "blocked": [
+    { "id": "T005", "reason": "human" },
+    { "id": "T098", "reason": "human" },
+    { "id": "T133", "reason": "human" },
+    { "id": "T134", "reason": "human" }
+  ]
+}

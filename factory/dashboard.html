@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noor Quiz · Factory</title>
+<!-- Serve from the repo root:  python3 -m http.server  →  http://localhost:8000/factory/dashboard.html  (add ?demo for sample jobs) -->
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --ink: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --accent: #0f766e; --pass: #15803d; --pass-bg: #dcfce7; --changes: #b45309; --changes-bg: #fef3c7;
+    --pending: #6b7385; --pending-bg: #eef0f4; --human: #b91c1c; --human-bg: #fee2e2;
+    --radius: 10px; --gap: 12px;
+    font-family: system-ui, "Segoe UI", "Noto Sans", "Noto Sans Arabic", "Noto Sans Ethiopic", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11151c; --panel: #1a2029; --ink: #e6e9ef; --muted: #98a1b3; --line: #2b3340;
+      --pass-bg: #14301f; --changes-bg: #3a2a10; --pending-bg: #252c37; --human-bg: #3b1616;
+      --pass: #4ade80; --changes: #fbbf24; --human: #f87171; --accent: #2dd4bf; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 14px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap);
+    padding-block: 12px; padding-inline: 20px; background: var(--panel); border-block-end: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; margin-inline-end: auto; }
+  header h1 span { color: var(--accent); }
+  .pill { border: 1px solid var(--line); border-radius: 999px; padding-block: 3px; padding-inline: 10px; font-size: 12px; white-space: nowrap; }
+  .pill.closed { color: var(--muted); }
+  .pill.closed.next { border-color: var(--human); color: var(--human); background: var(--human-bg); font-weight: 600; }
+  .pill.open { border-color: var(--pass); color: var(--pass); }
+  .pill.due { animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .45; } }
+  button { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding-block: 3px; padding-inline: 10px; cursor: pointer; }
+  .banner { padding-block: 8px; padding-inline: 20px; background: var(--changes-bg); color: var(--changes); font-weight: 600; }
+  .layout { display: grid; grid-template-columns: 1fr 280px; gap: var(--gap); padding: 16px 20px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: var(--gap); overflow-x: auto; padding-block-end: 8px; }
+  .col { background: color-mix(in srgb, var(--panel) 55%, transparent); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; min-block-size: 60vh; }
+  .col h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-block: 0 10px; display: flex; justify-content: space-between; }
+  .col.needs-human.busy { border-color: var(--human); background: var(--human-bg); }
+  .col.needs-human.busy h2 { color: var(--human); }
+  .card { display: block; inline-size: 100%; text-align: start; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px; margin-block-end: 10px; border-inline-start: 4px solid var(--accent); }
+  .card:hover { border-color: var(--accent); }
+  .card.stage-needs-human { border-inline-start-color: var(--human); }
+  .card.stage-done, .card.stage-split { border-inline-start-color: var(--pass); opacity: .8; }
+  .card .top { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; color: var(--muted); }
+  .card .top b { color: var(--ink); font-size: 13px; }
+  .card .title { margin-block: 4px 8px; font-weight: 500; line-height: 1.3; }
+  .card .meta { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+  .card .reason { font-size: 12px; color: var(--human); margin-block-start: 6px; font-weight: 600; }
+  .round { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-block-end: 4px; }
+  .round .r { font-size: 11px; color: var(--muted); inline-size: 22px; }
+  .round.past { opacity: .55; }
+  .chip { font-size: 11px; border-radius: 999px; padding-block: 1px; padding-inline: 6px; font-weight: 600; }
+  .chip.PASS { background: var(--pass-bg); color: var(--pass); }
+  .chip.CHANGES { background: var(--changes-bg); color: var(--changes); }
+  .chip.pending { background: var(--pending-bg); color: var(--pending); }
+  .tag { font-size: 11px; border-radius: 4px; padding-inline: 5px; background: var(--pending-bg); color: var(--muted); }
+  .tag.sec { background: var(--changes-bg); color: var(--changes); }
+  aside section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-block-end: var(--gap); }
+  aside h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-block: 0 8px; }
+  aside ol, aside ul { margin: 0; padding-inline-start: 18px; }
+  aside li { margin-block-end: 6px; line-height: 1.3; }
+  aside li small { color: var(--muted); display: block; }
+  .empty { color: var(--muted); font-size: 12px; }
+  dialog { inline-size: min(900px, 94vw); block-size: min(85vh, 900px); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 0; background: var(--panel); color: var(--ink); }
+  dialog::backdrop { background: rgb(0 0 0 / .4); }
+  .dlg { display: grid; grid-template-rows: auto auto 1fr; block-size: 100%; }
+  .dlg header { border: 0; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; padding-inline: 20px; border-block-end: 1px solid var(--line); padding-block-end: 8px; }
+  .tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .doc { overflow: auto; padding: 16px 24px; line-height: 1.5; }
+  .doc pre { background: var(--bg); padding: 10px; border-radius: 6px; overflow-x: auto; }
+  .doc code { font-family: ui-monospace, monospace; font-size: 12.5px; }
+  .doc table { border-collapse: collapse; } .doc td, .doc th { border: 1px solid var(--line); padding: 3px 8px; text-align: start; }
+  .verdict { display: inline-block; font-weight: 700; padding: 4px 12px; border-radius: 6px; margin-block-end: 8px; }
+  .verdict.ok { background: var(--pass-bg); color: var(--pass); } .verdict.bad { background: var(--changes-bg); color: var(--changes); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>◆</span> Noor Quiz factory</h1>
+  <span id="gates"></span>
+  <span class="pill" id="parallel"></span>
+  <span class="pill" id="updated"></span>
+  <button id="dir" title="Toggle right-to-left">⇄ RTL</button>
+</header>
+<div id="banner"></div>
+<div class="layout">
+  <main class="board" id="board"></main>
+  <aside id="side"></aside>
+</div>
+<dialog id="dlg"><div class="dlg">
+  <header><h1 id="dlgTitle"></h1><button id="dlgClose">Close</button></header>
+  <nav class="tabs" id="tabs"></nav>
+  <article class="doc" id="doc"></article>
+</div></dialog>
+
+<script>
+const STAGES = [['spec', 'Spec'], ['build', 'Build'], ['review', 'Review'], ['approve', 'Approve'],
+  ['merge-queue', 'Merge queue'], ['needs-human', 'Needs human'], ['done', 'Done']];
+const PHASES = ['P1', 'P2', 'P3', 'P4', 'Later'];
+const ACTIVE = new Set(['spec', 'build', 'review', 'approve', 'merge-queue']);
+const SHORT = { security: 'sec', ux: 'ux', ui: 'ui', code: 'code', content: 'content' };
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const get = (url, json) => fetch(`${url}?t=${Date.now()}`, { cache: 'no-store' })
+  .then(r => r.ok ? (json ? r.json() : r.text()) : null).catch(() => null);
+
+// ---- BOARD.md → tasks (same READY rules as .claude/skills/factory/SKILL.md) ----
+function parseBoard(md) {
+  const tasks = []; let phase = null;
+  for (const line of (md || '').split('\n')) {
+    const h = line.match(/^## (P\d|Later)\b/); if (h) { phase = h[1]; continue; }
+    const m = line.match(/^\|\s*\[(T\d+[a-z]?)\]/); if (!m || !phase) continue;
+    const c = line.split('|').slice(1, -1).map(s => s.trim());
+    tasks.push({ id: m[1], title: c[1], epic: c[2], phase,
+      deps: (c[3].match(/T\d+[a-z]?/g) || []), tags: c[4].split(/[\s,`]+/).filter(Boolean),
+      status: c[5], owner: c[6] });
+  }
+  return tasks;
+}
+const gatesOk = (phase, gates) => PHASES.slice(0, PHASES.indexOf(phase)).every(p => gates[p] === 'open');
+
+function classify(tasks, board) {
+  const byId = Object.fromEntries(tasks.map(t => [t.id, t]));
+  const running = new Set(board.jobs.filter(j => ACTIVE.has(j.stage)).map(j => j.id));
+  const depsDone = t => t.deps.every(d => byId[d]?.status === 'done');
+  const candidates = tasks.filter(t => t.status === 'todo' && t.owner !== 'human' && depsDone(t) && !running.has(t.id));
+  return {
+    ready: candidates.filter(t => gatesOk(t.phase, board.gates)),
+    gated: candidates.filter(t => !gatesOk(t.phase, board.gates)),
+    human: tasks.filter(t => t.owner === 'human' && t.status !== 'done'),
+    blocked: tasks.filter(t => t.status === 'blocked'),
+    phaseDone: p => tasks.filter(t => t.phase === p).every(t => t.status === 'done'),
+  };
+}
+
+// ---- rendering ----
+function chips(reviews, reviewers) {
+  return (reviewers || Object.keys(reviews || {})).map(k => {
+    const v = (reviews || {})[k] || 'pending';
+    return `<span class="chip ${esc(v)}" title="${esc(k)}: ${esc(v)}">${esc(SHORT[k] || k)}</span>`;
+  }).join('');
+}
+function card(j) {
+  const rounds = (j.history || []).map(h => `<div class="round past"><span class="r">R${h.round}</span>${chips(h.reviews)}</div>`).join('')
+    + (j.reviewers?.length ? `<div class="round"><span class="r">R${j.round}</span>${chips(j.reviews, j.reviewers)}</div>` : '');
+  const tags = (j.tags || []).map(t => `<span class="tag ${esc(t)}">${esc(t)}</span>`).join(' ');
+  return `<button class="card stage-${esc(j.stage)}" data-id="${esc(j.id)}">
+    <div class="top"><b>${esc(j.id)}</b><span>${esc(j.epic)} · ${esc(j.phase)} ${tags}</span></div>
+    <div class="title">${esc(j.title)}</div>
+    ${rounds}
+    ${j.stage === 'split' ? '<div class="meta">split into sub-tasks</div>' : ''}
+    ${j.branch ? `<div class="meta">${esc(j.branch)}</div>` : ''}
+    ${j.reason ? `<div class="reason">⚠ ${esc(j.reason)}</div>` : ''}
+  </button>`;
+}
+
+let state = { board: null, tasks: [] };
+
+function render() {
+  const { board, tasks } = state;
+  if (!board) { $('board').innerHTML = '<p class="empty">No factory/board.json found. Serve from the repo root and run <code>/factory next</code>.</p>'; return; }
+  const c = classify(tasks, board);
+
+  const nextGate = Object.keys(board.gates).find(p => board.gates[p] === 'closed');
+  $('gates').innerHTML = Object.entries(board.gates).map(([p, s]) => {
+    const due = s === 'closed' && tasks.length && c.phaseDone(p);
+    return `<span class="pill ${s} ${p === nextGate ? 'next' : ''} ${due ? 'due' : ''}" title="${due ? `ready for /factory gate ${p}` : ''}">gate ${esc(p)}: ${esc(s)}</span>`;
+  }).join(' ');
+  const running = board.jobs.filter(j => ACTIVE.has(j.stage)).length;
+  $('parallel').textContent = `running ${running} / ${board.maxParallel}`;
+  $('updated').textContent = `updated ${board.updatedAt ? new Date(board.updatedAt).toLocaleTimeString() : '–'}`;
+  $('banner').innerHTML = (DEMO ? '<div class="banner">Demo data (remove ?demo for the live board)</div>' : '')
+    + (board.stopping ? '<div class="banner">Stopping: finishing current rounds, starting nothing new</div>' : '');
+
+  $('board').innerHTML = STAGES.map(([key, label]) => {
+    let jobs = board.jobs.filter(j => j.stage === key || (key === 'done' && j.stage === 'split'));
+    if (key === 'done') jobs = jobs.slice(-8).reverse();
+    return `<section class="col ${key} ${jobs.length ? 'busy' : ''}"><h2><span>${label}</span><span>${jobs.length || ''}</span></h2>
+      ${jobs.map(card).join('') || '<p class="empty">—</p>'}</section>`;
+  }).join('');
+
+  const li = t => `<li><b>${esc(t.id)}</b> ${esc(t.title)}<small>${esc(t.epic)} · ${esc(t.phase)}${t.tags.includes('sec') ? ' · sec' : ''}</small></li>`;
+  const firstGate = c.gated[0] && PHASES[PHASES.indexOf(c.gated[0].phase) - 1];
+  $('side').innerHTML = `
+    <section><h3>Next ready</h3>${c.ready.length ? `<ol>${c.ready.slice(0, 5).map(li).join('')}</ol>` : '<p class="empty">Nothing ready.</p>'}</section>
+    ${c.gated.length ? `<section><h3>Waiting for gate ${esc(firstGate)}</h3><p class="empty">${c.gated.length} task(s) unlock when <code>/factory gate ${esc(firstGate)}</code> runs.</p></section>` : ''}
+    <section><h3>Needs a human</h3>${c.human.length ? `<ul>${c.human.map(li).join('')}</ul>` : '<p class="empty">None.</p>'}</section>
+    ${c.blocked.length ? `<section><h3>Blocked</h3><ul>${c.blocked.map(li).join('')}</ul></section>` : ''}
+    ${board.queue?.length ? `<section><h3>Orchestrator queue</h3><p>${board.queue.map(esc).join(' · ')}</p></section>` : ''}`;
+}
+
+// ---- job viewer ----
+function md(src) {
+  const lines = esc(src).split('\n'); const out = []; let i = 0;
+  const inline = s => s.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\([^)]+\)/g, '<u>$1</u>');
+  const first = (lines[0] || '').trim();
+  if (/^(VERDICT: \w+|APPROVE|ESCALATE|SPLIT|BLOCKED:.*)$/.test(first)) {
+    out.push(`<div class="verdict ${/PASS|APPROVE/.test(first) ? 'ok' : 'bad'}">${first}</div>`); i = 1;
+  }
+  while (i < lines.length) {
+    const l = lines[i];
+    if (l.startsWith('```')) { const buf = []; i++; while (i < lines.length && !lines[i].startsWith('```')) buf.push(lines[i++]); i++; out.push(`<pre><code>${buf.join('\n')}</code></pre>`); continue; }
+    if (/^#{1,4} /.test(l)) { const n = l.match(/^#+/)[0].length + 1; out.push(`<h${n}>${inline(l.replace(/^#+ /, ''))}</h${n}>`); i++; continue; }
+    if (l.startsWith('|')) { const rows = []; while (i < lines.length && lines[i].startsWith('|')) rows.push(lines[i++]);
+      out.push('<table>' + rows.filter(r => !/^\|[\s:|-]+\|$/.test(r)).map(r => '<tr>' + r.split('|').slice(1, -1).map(c => `<td>${inline(c.trim())}</td>`).join('') + '</tr>').join('') + '</table>'); continue; }
+    if (/^\s*([-*]|\d+\.) /.test(l)) { const items = []; while (i < lines.length && /^\s*([-*]|\d+\.) /.test(lines[i])) items.push(lines[i++].replace(/^\s*([-*]|\d+\.) /, ''));
+      out.push('<ul>' + items.map(t => `<li>${inline(t)}</li>`).join('') + '</ul>'); continue; }
+    if (l.trim()) out.push(`<p>${inline(l)}</p>`);
+    i++;
+  }
+  return out.join('\n');
+}
+
+async function openJob(id) {
+  const j = state.board.jobs.find(x => x.id === id); if (!j) return;
+  $('dlgTitle').textContent = `${j.id} · ${j.title}`;
+  $('doc').innerHTML = '<p class="empty">Loading…</p>'; $('tabs').innerHTML = ''; $('dlg').showModal();
+  if (DEMO) { $('doc').innerHTML = '<p class="empty">Demo job: no files on disk.</p>'; return; }
+  const dir = `jobs/${j.id}-${j.slug}/`;
+  const files = ['task.md', 'spec.md', 'build.md'];
+  const rounds = [...(j.history || []), ...(j.reviewers?.length ? [{ round: j.round, reviews: Object.fromEntries(j.reviewers.map(k => [k, 1])) }] : [])];
+  for (const r of rounds) { for (const k of Object.keys(r.reviews)) files.push(`round-${r.round}/review-${k}.md`); files.push(`round-${r.round}/rework.md`); }
+  files.push('decision.md', 'merge.md');
+  const docs = (await Promise.all(files.map(async f => [f, await get(dir + f)]))).filter(([, t]) => t !== null);
+  if (!docs.length) { $('doc').innerHTML = '<p class="empty">No files yet.</p>'; return; }
+  const show = n => { $('doc').innerHTML = md(docs[n][1]); [...$('tabs').children].forEach((b, k) => b.setAttribute('aria-selected', k === n)); };
+  $('tabs').innerHTML = docs.map(([f]) => `<button role="tab">${esc(f)}</button>`).join('');
+  [...$('tabs').children].forEach((b, n) => b.onclick = () => show(n));
+  show(docs.length - 1);
+}
+
+// ---- demo data (?demo) ----
+const DEMO_BOARD = { maxParallel: 3, stopping: false, updatedAt: new Date().toISOString(),
+  gates: { P1: 'closed', P2: 'closed', P3: 'closed', P4: 'closed' }, queue: ['T011', 'T030'], blocked: [{ id: 'T005', reason: 'human' }],
+  jobs: [
+    { id: 'T001', slug: 'monorepo', title: 'Monorepo skeleton with lint, typecheck and unit tests', epic: 'E00', phase: 'P1', stage: 'done', round: 1, reviewers: ['code'], reviews: { code: 'PASS' } },
+    { id: 'T012', slug: 'rules-baseline', title: 'Firestore rules baseline: deny every client write', epic: 'E01', phase: 'P1', tags: ['sec'], stage: 'approve', round: 1, branch: 'factory/T012-rules-baseline', reviewers: ['security', 'code'], reviews: { security: 'PASS', code: 'PASS' } },
+    { id: 'T010', slug: 'google-sign-in', title: 'Sign in with Google and get my user record', epic: 'E01', phase: 'P1', tags: ['sec'], stage: 'review', round: 2, branch: 'factory/T010-google-sign-in',
+      reviewers: ['security', 'ux', 'ui', 'code'], reviews: { security: 'CHANGES', ux: 'PASS', ui: 'pending', code: 'PASS' },
+      history: [{ round: 1, reviews: { security: 'CHANGES', ux: 'PASS', ui: 'CHANGES', code: 'PASS' } }] },
+    { id: 'T003', slug: 'clock-config', title: 'Clock port, typed config and domain errors', epic: 'E00', phase: 'P1', stage: 'needs-human', round: 1, branch: 'factory/T003-clock-config', reviewers: ['code'], reviews: { code: 'PASS' }, reason: 'new dependency without exit path' },
+    { id: 'T002', slug: 'local-stack', title: 'Local stack: emulators, Hono health endpoint, Vite home page', epic: 'E00', phase: 'P1', stage: 'merge-queue', round: 1, branch: 'factory/T002-local-stack', reviewers: ['ux', 'ui', 'code'], reviews: { ux: 'PASS', ui: 'PASS', code: 'PASS' } },
+  ] };
+
+// ---- loop ----
+async function refresh() {
+  const [board, boardMd] = await Promise.all([DEMO ? DEMO_BOARD : get('board.json', true), get('../docs/tasks/BOARD.md')]);
+  state = { board, tasks: parseBoard(boardMd) };
+  render();
+}
+$('board').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openJob(c.dataset.id); });
+$('dlgClose').onclick = () => $('dlg').close();
+$('dir').onclick = () => { const h = document.documentElement; h.dir = h.dir === 'rtl' ? 'ltr' : 'rtl'; };
+refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>
