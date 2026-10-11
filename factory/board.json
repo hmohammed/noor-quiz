@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-11T17:20:40Z",
+  "updatedAt": "2026-10-11T17:40:34Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -17,14 +17,22 @@
       "phase": "P1",
       "tags": [],
       "branch": "factory/T001-monorepo-skeleton",
-      "worktree": null,
-      "builderAgent": null,
-      "stage": "spec",
+      "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-a86b7040487255a46",
+      "builderAgent": "a86b7040487255a46",
+      "stage": "needs-human",
       "round": 1,
-      "reviewers": [],
-      "reviews": {},
+      "reviewers": [
+        "ux",
+        "ui",
+        "code"
+      ],
+      "reviews": {
+        "ux": "PASS",
+        "ui": "PASS",
+        "code": "PASS"
+      },
       "history": [],
-      "reason": null,
+      "reason": "CI green on GitHub unconfirmed; dev-only npm audit advisories (vitest 3.2 pin); unexplained edits to tooling tests",
       "startedAt": "2026-10-11T17:20:40Z",
       "finishedAt": null
     }
