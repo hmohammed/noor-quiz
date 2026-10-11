@@ -1,14 +1,51 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-11T00:00:00Z",
-  "gates": { "P1": "closed", "P2": "closed", "P3": "closed", "P4": "closed" },
-  "jobs": [],
-  "queue": ["T001"],
+  "updatedAt": "2026-10-11T17:20:40Z",
+  "gates": {
+    "P1": "closed",
+    "P2": "closed",
+    "P3": "closed",
+    "P4": "closed"
+  },
+  "jobs": [
+    {
+      "id": "T001",
+      "slug": "monorepo-skeleton",
+      "title": "Monorepo skeleton with lint, typecheck and unit tests",
+      "epic": "E00",
+      "phase": "P1",
+      "tags": [],
+      "branch": "factory/T001-monorepo-skeleton",
+      "worktree": null,
+      "builderAgent": null,
+      "stage": "spec",
+      "round": 1,
+      "reviewers": [],
+      "reviews": {},
+      "history": [],
+      "reason": null,
+      "startedAt": "2026-10-11T17:20:40Z",
+      "finishedAt": null
+    }
+  ],
+  "queue": [],
   "blocked": [
-    { "id": "T005", "reason": "human" },
-    { "id": "T098", "reason": "human" },
-    { "id": "T133", "reason": "human" },
-    { "id": "T134", "reason": "human" }
+    {
+      "id": "T005",
+      "reason": "human"
+    },
+    {
+      "id": "T098",
+      "reason": "human"
+    },
+    {
+      "id": "T133",
+      "reason": "human"
+    },
+    {
+      "id": "T134",
+      "reason": "human"
+    }
   ]
 }

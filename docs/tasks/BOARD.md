@@ -18,7 +18,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 
 | ID | Task | Epic | Depends | Tags | Status | Owner |
 | --- | --- | --- | --- | --- | --- | --- |
-| [T001](E00-foundation.md#t001) | Monorepo skeleton with lint, typecheck and unit tests | E00 | — |  | todo |  |
+| [T001](E00-foundation.md#t001) | Monorepo skeleton with lint, typecheck and unit tests | E00 | — |  | in-progress | factory |
 | [T002](E00-foundation.md#t002) | Local stack: emulators, Hono health endpoint, Vite home page | E00 | T001 |  | todo |  |
 | [T003](E00-foundation.md#t003) | Clock port, typed config and domain errors | E00 | T001 |  | todo |  |
 | [T005](E00-foundation.md#t005) | Create Firebase projects and accounts | E00 | — |  | todo | human |
