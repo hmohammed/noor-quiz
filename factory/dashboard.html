@@ -100,7 +100,7 @@
 
 <script>
 const STAGES = [['spec', 'Spec'], ['build', 'Build'], ['review', 'Review'], ['approve', 'Approve'],
-  ['merge-queue', 'Merge queue'], ['needs-human', 'Needs human'], ['done', 'Done']];
+  ['merge-queue', 'Opening PR'], ['pr-open', 'PR open'], ['needs-human', 'Needs human'], ['done', 'Done']];
 const PHASES = ['P1', 'P2', 'P3', 'P4', 'Later'];
 const ACTIVE = new Set(['spec', 'build', 'review', 'approve', 'merge-queue']);
 const SHORT = { security: 'sec', ux: 'ux', ui: 'ui', code: 'code', content: 'content' };

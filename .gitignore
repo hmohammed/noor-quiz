@@ -12,6 +12,9 @@ ui-debug.log*
 playwright-report/
 test-results/
 .claude/worktrees/
+# factory runtime state (local). Job folders reach main inside their task's PR (git add -f).
+factory/board.json
+factory/jobs/
 .DS_Store
 *.tsbuildinfo
 build/

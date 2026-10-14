@@ -9,7 +9,7 @@ Vertically sliced tasks in build order. Each task delivers one testable behaviou
 3. Read the task in its epic file, build it with the `vertical-slice` skill, get it reviewed.
 4. Set Status to `done` (or `review` if a person must check). Too big? Ask the `architect` agent to split it (T040 → T040a, T040b).
 
-Status: `todo` · `in-progress` · `review` · `done` · `blocked` · `split` (replaced by T###a/b; becomes `done` when the last sub-task is). Under `/factory`, only the orchestrator edits Status/Owner. Tags: `sec` = also run `security-reviewer`; `human` = needs a person (accounts, legal, scholar review).
+Status: `todo` · `in-progress` · `review` · `done` · `blocked` · `split` (replaced by T###a/b; becomes `done` when the last sub-task is). Under `/factory`, only the orchestrator edits Status/Owner, and only through PRs: a task's PR sets it to `done`, so a row reads `done` once that PR is merged. Running stages (spec, build, review, `pr-open`…) live in the local `factory/board.json` and show on the dashboard. Tags: `sec` = also run `security-reviewer`; `human` = needs a person (accounts, legal, scholar review).
 
 Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): gates are *security verified* (end P1), *feature freeze* (20 Dec), *load test passed* (end Jan).
 

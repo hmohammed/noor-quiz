@@ -110,7 +110,7 @@ A task is not done if it lowers coverage of `packages/core` or skips its accepta
 
 ## How to work on a task
 
-**Automated:** run `/factory next` (or `/factory run`) and watch `factory/dashboard.html`. The `factory` skill runs the steps below with subagents (spec-writer → builder → reviewers → approver → merge queue). **By hand:**
+**Automated:** run `/factory next` (or `/factory run`) and watch `factory/dashboard.html`. The `factory` skill runs the steps below with subagents (spec-writer → builder → reviewers → approver → pull request on GitHub). A human reviews and merges every PR. **By hand:**
 
 1. Open `docs/tasks/BOARD.md`, pick the first `todo` task whose dependencies are all `done`. Use the `pick-task` skill.
 2. Mark it `in-progress` with your name/session, on a branch `t###-short-name`.
@@ -122,6 +122,9 @@ A task is not done if it lowers coverage of `packages/core` or skips its accepta
 
 ## Definition of Done
 
+A task is done when a **pull request to `main` is open on GitHub** that meets everything below. The factory's work on a task ends there. BOARD.md shows `done` once a human merges the PR, and tasks that depend on it wait for that merge.
+
+- The PR contains the code, the tests, the job records (`factory/jobs/<id>-<slug>/`) and the task's BOARD.md row set to `done`.
 - Acceptance criteria in the task all pass, with automated tests.
 - Lint, typecheck, unit tests green; emulator tests green if data/rules touched.
 - No hard rule broken; no new dependency without justification.
@@ -139,4 +142,5 @@ Agents (`.claude/agents/`): `spec-writer`, `builder`, `code-reviewer`, `security
 - Marking religious content `approved`.
 - Changing production Firebase projects, Stripe live mode, or DNS.
 - Reading or printing real secrets; touching `.env` files other than `.env.example`.
-- Force-pushing `main` or rewriting history.
+- Force-pushing anything or rewriting history.
+- Committing to, pushing to, or merging into `main`. Changes reach `main` only through PRs that a human merges. The factory orchestrator pushes `factory/…` branches and opens PRs; no other agent pushes.

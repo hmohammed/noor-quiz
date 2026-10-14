@@ -27,7 +27,7 @@ Follow the `vertical-slice` skill and any skills the task lists.
 ## Close
 - All acceptance criteria covered by tests; `npm run lint && npm run typecheck && npm test` green (plus emulator/e2e if relevant).
 - Run `code-reviewer` (and `security-reviewer` if the task is tagged `sec`).
-- Set the row to `done` (or `review` if a human must check), and add a one-line note in the task's "Notes" with anything the next task should know.
+- Open a PR to `main` (that is the Definition of Done). In that PR, set the row to `done` (or `review` if a human must check), and add a one-line note in the task's "Notes" with anything the next task should know.
 - If you discovered extra work, add a new task at the right place in the board with status `todo` instead of doing it now.
 
 ## Status values
