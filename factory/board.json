@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:55:23Z",
+  "updatedAt": "2026-10-14T10:00:19Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -173,14 +173,14 @@
       "branch": "factory/T010-google-sign-in",
       "worktree": null,
       "builderAgent": null,
-      "stage": "spec",
+      "stage": "split",
       "round": 1,
       "reviewers": [],
       "reviews": {},
       "history": [],
       "reason": null,
       "startedAt": "2026-10-14T09:55:23Z",
-      "finishedAt": null
+      "finishedAt": "2026-10-14T10:00:19Z"
     }
   ],
   "queue": [],
