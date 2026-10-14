@@ -26,8 +26,12 @@ Source of truth: `AGENT.md` (hard rules, commands, Definition of Done) and `docs
 
 1. The repo must be a git repo with a `main` branch, and this checkout must be on `main`. If it is not, stop and ask the user to set it up (`git init -b main && git add -A && git commit -m "initial"`). Do not do that yourself.
 2. Load `factory/board.json`. If a job is mid-stage and its agent is gone (a new session), see **Restart** below.
-3. **Sync with GitHub.** `git fetch origin`. Local `main` must not be ahead of `origin/main` (`git rev-list --count origin/main..main` is 0); if it is, stop and ask the human to push or reconcile. Then `git pull --ff-only`. Untracked, gitignored job folders are overwritten by the pull, which is fine: the merged PR carries the same files.
-4. **Check open PRs.** For every job in stage `pr-open`, run `gh pr view <pr> --json state,mergedAt`. `MERGED` → `stage: "done"`, `finishedAt` = mergedAt, `git worktree remove <worktree>` (keep the branch). `CLOSED` → `stage: "needs-human"`, `reason: "PR closed without merge"`. `OPEN` → leave it.
+3. **Sync with GitHub: run `npm run factory:sync`** (`factory/sync.mjs`) and read its output. It does, without an agent:
+   - `git fetch origin`; if local `main` is ahead of `origin/main` it reports that and does not pull (stop and ask the human to push or reconcile); otherwise `git pull --ff-only`. Untracked, gitignored job folders are overwritten by the pull, which is fine: the merged PR carries the same files.
+   - For every job in stage `pr-open` or `split` with a `pr`: `gh pr view <pr> --json state,mergedAt`. `MERGED` → `stage: "done"`, `finishedAt` = mergedAt, `git worktree remove <worktree>` without `--force` (the branch is kept). `CLOSED` → `stage: "needs-human"`, `reason: "PR closed without merge"`. `OPEN` → left alone.
+   
+   A human can run the same script at any time, or keep `npm run factory:sync -- --watch` running next to the dashboard so merged PRs move to `done` within a minute. Reload `factory/board.json` after it runs.
+4. If the script reports that `main` is ahead, that a pull failed, or that `gh` failed, stop and tell the human.
 5. Parse `docs/tasks/BOARD.md`: every table row `| [T###](E##-file.md#t###) | title | epic | depends | tags | status | owner |`, plus its phase from the `## P1 ·`, `## P2 ·`, `## P3 ·`, `## P4 ·`, `## Later` heading above it.
 
 ## Task selection
@@ -175,7 +179,7 @@ A **rebase conflict or red suite**: run `git rebase --abort` if needed, write th
 
 ## Other commands
 
-- **status**: run the GitHub sync from Preflight first (read-only apart from `board.json`), then print a table of jobs (id, stage, round, reviews, PR link for `pr-open`), the queue, blocked tasks, gates. For each closed gate whose phase is fully `done`, add "ready for `/factory gate P1`". Change nothing.
+- **status**: run `npm run factory:sync` first (it only pulls `main` and updates `board.json`), then print a table of jobs (id, stage, round, reviews, PR link for `pr-open`), the queue, blocked tasks, gates. For each closed gate whose phase is fully `done`, add "ready for `/factory gate P1`". Change nothing.
 - **approve <id>**: the job must be `needs-human`. Note `Approved by human` in `decision.md` (append), set `stage: "merge-queue"`, and open the PR (step 5).
 - **rework <id> <note>**: works for `needs-human` and `pr-open` jobs. Write the note to `JOB/round-N/rework.md`, set `round += 1` and `stage: "build"`, resume (or respawn) the builder pointing at it, then review. Human rework does not count toward the round limit.
 - **gate <phase>**: refuse and list what is missing unless every task in that phase is `done`. Otherwise set `gates.<phase>: "open"` in `board.json` (local state, no commit) and recompute READY.
