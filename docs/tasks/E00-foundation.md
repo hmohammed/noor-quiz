@@ -109,7 +109,7 @@ Skills: `deploy-release`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- T004: Functions source is `apps/api/build` (esbuild bundle + a generated `package.json` with only `firebase-functions`/`firebase-admin`, ranges copied from `apps/api/package.json`, no lockfile yet). The emulator `.env.local` now lives in `apps/api/build/` (generated from `apps/api/.env.example`); an old `apps/api/.env.local` is unused and can be deleted by hand. Dev runtime env comes from the CI-written `apps/api/build/.env.<projectId>` in the `deploy-dev` job of `.github/workflows/ci.yml`: add new non-secret config there (and to `.env.example`). Region lives in `apps/api/src/region.ts`; Hosting rewrites `/v1/**` → function `api` in that region (`apps/api/src/deploy-config.test.ts` checks they match). Check names are `unit`, `emulator` and `e2e` (e2e is skipped on PRs that touch none of apps/, packages/, firebase/, package*.json, ci.yml); `deploy-dev` runs on push to main only, via WIF (no keys). Dev host: `https://noor-quiz-bec90.web.app`.
 
 ## T005
 

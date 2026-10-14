@@ -80,7 +80,7 @@ npm run test:emulator       # adapter + firestore rules tests (needs Firebase em
 npm run test:e2e            # Playwright against local stack
 npm run lint && npm run typecheck
 npm run build               # api function bundle + web
-npm run deploy:staging      # CI normally does this  # not yet — T004
+npm run deploy:staging      # CI normally does this  # not yet — T135 (needs T005b)
 ```
 
 If a command does not exist yet, the task that needs it creates it.
