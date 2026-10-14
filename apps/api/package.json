@@ -16,11 +16,14 @@
   "dependencies": {
     "@hono/node-server": "^1.19.17",
     "@noor/contracts": "*",
+    "@noor/core": "*",
     "firebase-admin": "^13.10.0",
     "firebase-functions": "^7.4.0",
-    "hono": "^4.13.13"
+    "hono": "^4.13.13",
+    "zod": "^4.6.6"
   },
   "devDependencies": {
+    "@noor/testkit": "*",
     "esbuild": "^0.25.12"
   }
 }

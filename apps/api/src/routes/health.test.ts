@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { HealthResponse } from '@noor/contracts';
+import { makeTestDeps } from '@noor/testkit';
 import { createApp } from '../app';
 
 describe('GET /v1/health', () => {
-  const app = createApp({ version: 'test-1' });
+  const app = createApp({ deps: makeTestDeps(), version: 'test-1' });
 
   it('returns 200 with a contract-valid JSON body and no auth or tenant', async () => {
     const res = await app.request('/v1/health');

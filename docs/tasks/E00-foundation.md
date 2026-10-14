@@ -85,7 +85,7 @@ Skills: `port-adapter`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- T003: `Instant` is a branded epoch-ms number (`packages/core/src/time/instant.ts`); build one with `instantFromIso` (Z strings only) or `instantFromMs`, never a bare cast. A day is a fixed 86 400 000 ms; get the local day with `localDate(i, tz)` (Gregorian, ASCII digits, pinned via `Intl`). Zoned → instant helpers (start/end of a local day) are deferred to the E03/E04 tasks that need them. `Deps` lives in core (`packages/core/src/deps.ts`): extend it when you add a port, add the fake to `makeTestDeps()` in testkit and the real adapter in `apps/api/src/composition.ts` (the only place that picks adapters). `createApp({ deps, version })` replaces the T002 options. Error bodies use a fixed public message per code (`publicMessage` in `apps/api/src/errors.ts`); `DomainError.details` is never serialised; a new core code fails typecheck until mapped in `statusForCode`. Config: `loadConfig(env)` requires `NOOR_ENV`; `npm run dev:emulators` first runs `apps/api/scripts/ensure-env-local.mjs`, which copies `apps/api/.env.example` → `apps/api/.env.local` (gitignored) if missing. Lint now bans `Date.now()` / `new Date()` in core and routes.
 
 ## T004
 

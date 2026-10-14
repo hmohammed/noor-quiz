@@ -16,7 +16,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "dev": "concurrently -k -n emu,api,web -c auto \"npm:dev:emulators\" \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:emulators": "npm run build -w @noor/api && FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase emulators:start --config firebase/firebase.json --project demo-noor",
+    "dev:emulators": "node apps/api/scripts/ensure-env-local.mjs && npm run build -w @noor/api &&FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase emulators:start --config firebase/firebase.json --project demo-noor",
     "dev:api": "npm run build:watch -w @noor/api",
     "dev:web": "npm run dev -w @noor/web",
     "build": "npm run build -w @noor/api && npm run build -w @noor/web",

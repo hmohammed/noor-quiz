@@ -4,6 +4,8 @@ import prettier from 'eslint-config-prettier';
 
 const vendorMessage = 'No vendor imports in packages/core (AGENT.md rule 1). Add a port.';
 
+const clockMessage = 'Use the Clock port (AGENT.md rule 5)';
+
 const coreBanned = {
   paths: [
     { name: 'node:http', message: 'core has no I/O (AGENT.md rule 1)' },
@@ -45,6 +47,22 @@ export default tseslint.config(
   {
     files: ['packages/core/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': ['error', coreBanned] },
+  },
+  {
+    files: ['packages/core/**/*.{ts,tsx}', 'apps/api/src/routes/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message: clockMessage,
+        },
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: clockMessage,
+        },
+      ],
+    },
   },
   prettier,
 );
