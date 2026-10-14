@@ -1,3 +1,41 @@
+APPROVE
+Reason: Round 2 does exactly what the human rework asked (Firestore emulator 8080 -> 8180, plus the README). The committed `npm run test:emulator` now passes 67/67, both reviewers PASS, and no escalation trigger applies.
+# Decision — T012
+
+## Checks
+- Reviews (round 2): security PASS, code PASS. Both have no P0–P2 findings. The two P3 lint nits from round 1 are carried over, and rework.md puts them out of scope.
+- Acceptance criteria → tests: 2/2 task ACs, covered by spec tests 1–15. Each is listed in build.md and exists in the diff:
+  - Rules AC → `firebase/rules.test.ts`. It runs describe.each over the unauthenticated, authenticated and forged-claims clients for get, list, create, overwrite, update, delete, addDoc, batch and transaction on users, identities and anything. It also has a seed sanity check and a "writes really were denied" check.
+  - Lint AC → `tooling/src/eslint-web-firestore-writes.test.ts`, which flags setDoc and the other five write APIs from firebase/firestore and /lite, plus .tsx, aliased, namespace and re-export imports. It allows read APIs and does not apply outside apps/web.
+- Checks green (build.md, Round 2): lint, typecheck, test (13 files, 80 tests), test:emulator (67/67, committed script run unchanged on 127.0.0.1:8180, exit code 0). This resolves the round-1 escalation, which was that the committed script had never been seen passing. Round 1 also had a mutation check (`allow ... if true` made 64/67 fail). e2e: n/a, no UI.
+- Definition of Done:
+  - i18n/RTL: n/a (no UI).
+  - `.env.example`: n/a (no config added).
+  - Docs: AGENT.md `not yet` marker removed, README command added with port 8180, E01 T012 notes filled in.
+  - ADR: none needed. The port move is a local dev setting that the human ordered.
+- Escalation triggers: none.
+  - Owner/tag human: no (tag `sec`).
+  - Billing live / prod config / DNS: no. The change is only the `demo-noor` emulator port in firebase/firebase.json:7, still bound to 127.0.0.1.
+  - firestore.rules weaker: no. Only the comment changed, and it is still a single `match /{document=**} { allow read, write: if false; }` (firebase/firestore.rules:7-13).
+  - New dependency: `@firebase/rules-unit-testing` and `firebase` as root devDependencies. Justification and exit path are in build.md and spec.md. All 41 added lockfile `resolved` URLs are on registry.npmjs.org.
+  - reviewStatus approved: no.
+  - Unsure: no.
+- Scope note: spec.md listed firebase.json emulator ports as out of scope, but the human asked for this change explicitly in round-1/rework.md. Outside `factory/`, `git grep 8080` on the branch finds nothing.
+
+## For the merge queue (not blocking approval)
+- merge.md: the previous squash merge paused because `main` had an uncommitted, human-owned change to package-lock.json, and this branch also changes package-lock.json. A human needs to clear that before the merge can go ahead.
+- Optional P3 follow-ups (security review):
+  - eslint.config.js:35 does not cover the compat SDK (`firebase/compat/*`, `@firebase/firestore-compat`) or `@firebase/firestore/lite`.
+  - tooling/src/eslint-web-firestore-writes.test.ts:23 has no test for the `@firebase/firestore` path.
+  - The deny-all rules still block those writes. Consider adding this to the T012 follow-up note in docs/tasks/E01-identity-privacy.md.
+
+## For the human (ESCALATE only)
+n/a
+
+---
+
+## Round 1 (superseded)
+
 ESCALATE
 Reason: The committed `npm run test:emulator` has never been seen passing, because port 8080 was busy for the builder and is still busy now. Both reviewers ask for a re-run before merge, and I'm not sure enough to approve a `sec` task without it.
 # Decision — T012
