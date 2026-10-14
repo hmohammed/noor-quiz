@@ -91,16 +91,16 @@ _(implementer adds notes for the next task here)_
 
 **CI: emulator tests, e2e and auto-deploy to dev**
 
-Phase: P1 · Depends on: [T002](E00-foundation.md#t002), [T005](E00-foundation.md#t005) · Tags: —
+Phase: P1 · Depends on: [T002](E00-foundation.md#t002), [T005a](E00-foundation.md#t005a) · Tags: —
 Skills: `deploy-release`
 
-**Goal.** Every PR runs the full test pyramid; merges to main deploy to `noor-dev`.
+**Goal.** Every PR runs the full test pyramid; merges to main deploy to the dev project (`noor-quiz-bec90`, alias `dev`).
 
 **Scope**
 
 - CI job running `npm run test:emulator` with the Firebase emulator
 - CI job running Playwright e2e on the emulator stack for PRs touching apps/
-- Deploy job to `noor-dev` on push to main (rules, indexes, functions, hosting) using a deploy service account from GitHub secrets
+- Deploy job to the dev project (`noor-quiz-bec90`) on push to main (rules, indexes, functions, hosting) using a deploy service account from GitHub secrets
 
 **Acceptance criteria**
 
@@ -122,6 +122,7 @@ Skills: `deploy-release`
 
 **Scope**
 
+- Split into T005a (dev) and T005b (staging, prod). Original scope:
 - Firebase/GCP projects `noor-dev`, `noor-staging`, `noor-prod` on Blaze plan with budget alerts
 - Google sign-in enabled; authorised domains set
 - Deploy service account per project; keys stored as GitHub environment secrets (dev, staging, prod)
@@ -135,3 +136,55 @@ Skills: `deploy-release`
 **Notes**
 
 _(implementer adds notes for the next task here)_
+
+## T005a
+
+**Dev Firebase project and GitHub deploy access**
+
+Phase: P1 · Depends on: — · Tags: `human`
+Skills: `deploy-release`
+
+**Goal.** The dev cloud project is ready so T004 can deploy to it from CI.
+
+**Scope**
+
+- Dev project `noor-quiz-bec90` (display name `noor-quiz`, number 1048700486127) on Blaze with a budget alert
+- Firestore (Native) created; region recorded in Notes
+- Google sign-in enabled; authorised domains set; Hosting site initialised; deploy APIs enabled
+- Deploy service account `github-deploy@noor-quiz-bec90.iam.gserviceaccount.com` with deploy roles
+- GitHub environment `dev` with deploy credentials (Workload Identity Federation preferred, or a JSON key secret)
+- Branch protection on `main`
+
+**Acceptance criteria**
+
+- [x] `firebase projects:list` shows `noor-quiz-bec90`
+- [ ] GitHub environment `dev` exists with the deploy credentials
+- [ ] `.firebaserc` maps alias `dev` to `noor-quiz-bec90`
+
+**Notes**
+
+_(person fills in: region, WIF or key, GitHub variable/secret names, service account email)_
+
+## T005b
+
+**Staging and prod Firebase projects**
+
+Phase: P1 · Depends on: [T005a](E00-foundation.md#t005a) · Tags: `human`
+Skills: `deploy-release`
+
+**Goal.** Separate staging and prod projects exist before the release pipeline (T135) is built.
+
+**Scope**
+
+- Staging and prod Firebase/GCP projects, set up like T005a (Blaze, budget alerts, Firestore same region, Google sign-in, deploy service account)
+- GitHub environments `staging` and `prod`; `prod` has required reviewers
+- `.firebaserc` aliases `staging` and `prod`; update the `noor-prod` deny rules in `.claude/settings.json` to the real prod ID
+
+**Acceptance criteria**
+
+- [ ] `firebase projects:list` shows the staging and prod projects
+- [ ] GitHub environments staging/prod exist with required credentials
+
+**Notes**
+
+_(person fills in project IDs and secret names)_

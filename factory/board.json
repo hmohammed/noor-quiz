@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-11T19:19:08Z",
+  "updatedAt": "2026-10-14T00:00:00Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -82,7 +82,11 @@
   ],
   "blocked": [
     {
-      "id": "T005",
+      "id": "T005a",
+      "reason": "human"
+    },
+    {
+      "id": "T005b",
       "reason": "human"
     },
     {

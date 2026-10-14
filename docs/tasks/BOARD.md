@@ -21,8 +21,10 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T001](E00-foundation.md#t001) | Monorepo skeleton with lint, typecheck and unit tests | E00 | — |  | done | factory |
 | [T002](E00-foundation.md#t002) | Local stack: emulators, Hono health endpoint, Vite home page | E00 | T001 |  | done | factory |
 | [T003](E00-foundation.md#t003) | Clock port, typed config and domain errors | E00 | T001 |  | todo |  |
-| [T005](E00-foundation.md#t005) | Create Firebase projects and accounts | E00 | — |  | todo | human |
-| [T004](E00-foundation.md#t004) | CI: emulator tests, e2e and auto-deploy to dev | E00 | T002, T005 |  | todo |  |
+| [T005](E00-foundation.md#t005) | Create Firebase projects and accounts | E00 | — |  | split | human |
+| [T005a](E00-foundation.md#t005a) | Dev Firebase project and GitHub deploy access | E00 | — |  | todo | human |
+| [T005b](E00-foundation.md#t005b) | Staging and prod Firebase projects | E00 | T005a |  | todo | human |
+| [T004](E00-foundation.md#t004) | CI: emulator tests, e2e and auto-deploy to dev | E00 | T002, T005a |  | todo |  |
 | [T010](E01-identity-privacy.md#t010) | Sign in with Google and get my user record | E01 | T002, T003 | sec | todo |  |
 | [T011](E01-identity-privacy.md#t011) | Edit my profile: display name, locale, timezone | E01 | T010 |  | todo |  |
 | [T012](E01-identity-privacy.md#t012) | Firestore rules baseline: deny every client write | E01 | T002 | sec | todo |  |
@@ -96,7 +98,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T132](E13-launch.md#t132) | Load test 10k answers and scoring | E13 | T073, T051 |  | todo |  |
 | [T133](E13-launch.md#t133) | Pilot content: 30+ approved questions in 3 languages | E13 | T101, T082 |  | todo | human |
 | [T134](E13-launch.md#t134) | Pilot with 3 communities | E13 | T133, T065 |  | todo | human |
-| [T135](E13-launch.md#t135) | Production release pipeline with approval | E13 | T004, T131 |  | todo |  |
+| [T135](E13-launch.md#t135) | Production release pipeline with approval | E13 | T004, T131, T005b |  | todo |  |
 
 ## P4 · Ramadan (Feb – Mar)
 

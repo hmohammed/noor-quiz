@@ -9,9 +9,9 @@ description: Run the local stack with Firebase emulators, manage environments (d
 | Env | Firebase project | Stripe | Who deploys |
 | --- | --- | --- | --- |
 | local | emulators (`demo-noor`) | fake provider | you |
-| dev | `noor-dev` | test mode | CI on merge to `main` |
-| staging | `noor-staging` | test mode | CI on tag `v*-rc*` |
-| prod | `noor-prod` | live mode | human approval in CI on tag `v*` |
+| dev | `noor-quiz-bec90` (alias `dev`) | test mode | CI on merge to `main` |
+| staging | `noor-staging` (not created yet, T005b) | test mode | CI on tag `v*-rc*` |
+| prod | `noor-prod` (not created yet, T005b) | live mode | human approval in CI on tag `v*` |
 
 Agents never deploy to prod and never change prod config.
 
