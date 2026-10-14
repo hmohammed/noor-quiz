@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:51:11Z",
+  "updatedAt": "2026-10-14T09:53:52Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -110,7 +110,7 @@
       "branch": "factory/T012-rules-deny-writes",
       "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-a352c4d8fdeda16fa",
       "builderAgent": "a352c4d8fdeda16fa",
-      "stage": "merge-queue",
+      "stage": "done",
       "round": 3,
       "reviewers": [
         "security",
@@ -140,7 +140,7 @@
       ],
       "reason": null,
       "startedAt": "2026-10-14T09:10:48Z",
-      "finishedAt": null
+      "finishedAt": "2026-10-14T09:53:52Z"
     }
   ],
   "queue": [

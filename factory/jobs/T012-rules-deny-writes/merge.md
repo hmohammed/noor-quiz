@@ -57,3 +57,46 @@ Done; branch restored to cb1745c.
 `main` now contains T003 (2bf37d9), which also edits `eslint.config.js` (new `no-restricted-syntax` rule banning `Date.now()` / `new Date()` in core and api routes) and `package.json` / `package-lock.json` (api workspace deps, `dev:emulators` runs `ensure-env-local.mjs`).
 Conflict in `eslint.config.js` when applying 951a41c "T012: ban Firestore write API imports in apps/web".
 Builder: rebase onto main, keep BOTH T003's clock rule and T012's apps/web Firestore-write ban, resolve any package.json / package-lock.json conflict by regenerating the lockfile with `npm install` (do not hand-edit it), then re-run lint, typecheck, npm test and `npm run test:emulator` (port 8180).
+
+# Merge attempt 3 (after round 3)
+## git -C <worktree> rebase main
+Rebasing (1/4)Rebasing (2/4)Rebasing (3/4)Rebasing (4/4)[KSuccessfully rebased and updated refs/heads/factory/T012-rules-deny-writes.
+exit=0
+## npm install
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+exit=0
+## npm run lint
+> lint
+> eslint . --max-warnings 0 && prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+exit=0
+## npm run typecheck
+
+> typecheck
+> tsc -b
+exit=0
+## npm test
+
+ Test Files  25 passed (25)
+      Tests  190 passed (190)
+   Start at  11:52:01
+   Duration  23.13s (transform 33.15s, setup 0ms, collect 77.28s, tests 28.22s, environment 8ms, prepare 38.71s)
+exit=0
+## npm run test:emulator
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator
+exit=0
+## git merge --squash factory/T012-rules-deny-writes
+ create mode 100644 firebase/vitest.config.ts
+ create mode 100644 tooling/src/eslint-web-firestore-writes.test.ts
+exit=0
+## commit: 9abcd88 T012: Firestore rules baseline: deny every client write
