@@ -159,11 +159,21 @@ Skills: `deploy-release`
 
 - [x] `firebase projects:list` shows `noor-quiz-bec90`
 - [ ] GitHub environment `dev` exists with the deploy credentials
-- [ ] `.firebaserc` maps alias `dev` to `noor-quiz-bec90`
+- [x] `.firebaserc` maps alias `dev` to `noor-quiz-bec90`
 
 **Notes**
 
-_(person fills in: region, WIF or key, GitHub variable/secret names, service account email)_
+- Project `noor-quiz-bec90` (number 1048700486127), no GCP organization. Tagged `environment=Development` (project-level tag key).
+- Firestore: `(default)`, Native mode, location **`eur3`**. Deploy functions to **`europe-west1`**.
+- Deploy APIs enabled (Cloud Functions, Run, Build, Artifact Registry, Eventarc, Pub/Sub, Secret Manager, Cloud Tasks, Scheduler, Extensions, STS).
+- Deploy service account: `github-deploy@noor-quiz-bec90.iam.gserviceaccount.com`. Project roles: firebase.viewer, firebasehosting.admin, firebaserules.admin, datastore.indexAdmin, cloudfunctions.admin, run.admin, artifactregistry.admin, secretmanager.viewer, serviceusage.serviceUsageConsumer, serviceusage.apiKeysViewer, firebaseextensions.viewer. `iam.serviceAccountUser` only on the runtime SAs (`1048700486127-compute@developer.gserviceaccount.com`, `noor-quiz-bec90@appspot.gserviceaccount.com`).
+- **No service account key exists.** CI authenticates with Workload Identity Federation:
+  - provider: `projects/1048700486127/locations/global/workloadIdentityPools/github/providers/noor-quiz`
+  - provider condition: `assertion.repository == 'hmohammed/noor-quiz'`
+  - only subject `repo:hmohammed/noor-quiz:environment:dev` may impersonate the SA, so the deploy job **must** declare `environment: dev`
+  - workflow needs `permissions: id-token: write` and `google-github-actions/auth@v2` with `workload_identity_provider` + `service_account`
+- GitHub environment `dev` variables (not secrets, neither value is sensitive): `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID=noor-quiz-bec90`.
+- `.firebaserc` lives in `firebase/` next to `firebase.json`, alias `dev` only, no `default` (so a bare `firebase deploy` cannot hit a real project).
 
 ## T005b
 
@@ -177,6 +187,7 @@ Skills: `deploy-release`
 **Scope**
 
 - Staging and prod Firebase/GCP projects, set up like T005a (Blaze, budget alerts, Firestore same region, Google sign-in, deploy service account)
+- `environment` resource tag bound to each project: `Staging` and `Production` (as `Development` on T005a's dev project)
 - GitHub environments `staging` and `prod`; `prod` has required reviewers
 - `.firebaserc` aliases `staging` and `prod`; update the `noor-prod` deny rules in `.claude/settings.json` to the real prod ID
 
