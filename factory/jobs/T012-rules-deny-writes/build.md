@@ -68,3 +68,17 @@ Worktree: /mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/age
 
 Commits (after rebase onto ef1c7d2): 951a41c, 3a8eca3, ac10c53 (round 1), cb1745c T012: move Firestore emulator port from 8080 to 8180.
 The P3 lint nits from the security review were not changed: the rework note puts them out of scope.
+
+## Round 3
+- merge.md (Merge attempt 2): rebase conflict in eslint.config.js against T003 (2bf37d9) → rebased onto main (now on 779cace) and resolved in eslint.config.js (727ffe0). I kept both blocks: T003's `no-restricted-syntax` Date.now()/new Date() rule for `packages/core/**` + `apps/api/src/routes/**`, and T012's `no-restricted-imports` Firestore-write ban for `apps/web/**`. They use different rules on different globs, so neither overrides the other. The core `no-restricted-imports` block is unchanged. The only text change in the T012 block is its comment, which now says "core blocks" (plural).
+- merge.md: package.json / package-lock.json → git merged both without conflicts. package.json keeps both sides: T003's `dev:emulators` (ensure-env-local.mjs) and workspace changes, plus T012's `test:emulator` script and the `@firebase/rules-unit-testing` / `firebase` devDependencies. `npm install` on the merged lockfile reported "up to date" and changed nothing, so I made no lockfile edit.
+- `apps/api/.env.example` came in from main; I did not open or touch it.
+
+| command | result |
+| --- | --- |
+| npm run lint | pass |
+| npm run typecheck | pass |
+| npm test | pass (25 files, 190 tests; includes tooling/src/eslint-clock-rule.test.ts 4/4 and tooling/src/eslint-web-firestore-writes.test.ts 19/19, eslint-core-boundary 29/29) |
+| npm run test:emulator | pass (67/67, committed script, port 8180) |
+
+Commits after rebase: 727ffe0 T012: ban Firestore write API imports in apps/web · 2e95ac4 T012: Firestore rules tests on the emulator and test:emulator script · 2eb5429 T012: document test:emulator and add notes for T004 · ee39dfc T012: move Firestore emulator port from 8080 to 8180

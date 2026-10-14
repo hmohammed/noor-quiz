@@ -1,4 +1,42 @@
 APPROVE
+Reason: Round 3 is a clean rebase onto main (779cace, with T003). eslint.config.js keeps T003's clock rule and T012's apps/web write ban on separate globs, both reviewers PASS, all checks are green including test:emulator 67/67, and no escalation trigger applies.
+# Decision — T012
+
+## Checks
+- Reviews (round 3): security PASS, code PASS. Neither has P0–P2 findings. The two P3 lint nits carried over from earlier rounds are still out of scope (round-1/rework.md).
+- Acceptance criteria → tests: 2/2 task ACs, covered by spec tests 1–15. Each is listed in build.md and exists in the diff:
+  - Rules AC → `firebase/rules.test.ts`. It runs describe.each over unauthenticated, authenticated and forged-claims clients for get, list, create, overwrite, update, delete, addDoc, batch and transaction on users, identities and anything. It also has the seed sanity check and the "writes really were denied" check.
+  - Lint AC → `tooling/src/eslint-web-firestore-writes.test.ts` (19 tests). It flags setDoc and the other five write APIs from firebase/firestore and /lite, plus .tsx, aliased, namespace and re-export imports. It allows read APIs and does not apply outside apps/web.
+- Checks green (build.md, Round 3, after the rebase): lint, typecheck, test (25 files, 190 tests: eslint-clock-rule 4/4, eslint-web-firestore-writes 19/19, eslint-core-boundary 29/29) and test:emulator (67/67, committed script on 127.0.0.1:8180). e2e: n/a, no UI.
+- Rebase verification (by me):
+  - The merge-base of the branch equals the `main` tip 779cace. The branch has 4 commits: 727ffe0, 2e95ac4, 2eb5429, ee39dfc.
+  - eslint.config.js on the branch has 4 blocks. Lines 66-67 hold the core `no-restricted-imports` (coreBanned), unchanged. Lines 70-80 hold T003's `no-restricted-syntax` clock rule for `packages/core/**` and `apps/api/src/routes/**`, unchanged. Lines 86-89 hold T012's `no-restricted-imports` for `apps/web/**/*.{ts,tsx}`. Compared with main, the diff only adds lines (+23).
+  - package.json keeps T003's `dev:emulators` and adds only `test:emulator` and the two devDependencies. The package-lock.json diff only adds entries; its one removed line is an `"optional": true` flag, which goes because `firebase` now pulls that package in. All added `resolved` URLs are on registry.npmjs.org.
+- Definition of Done:
+  - i18n/RTL: n/a (no UI).
+  - `.env.example`: n/a (no config added). `apps/api/.env.example` came in from main and was not opened.
+  - Docs: the AGENT.md `not yet` marker is removed, the README command is added with port 8180, and the E01 T012 notes are filled in.
+  - ADR: none needed.
+- Escalation triggers: none.
+  - Owner/tag human: no (tag `sec`).
+  - Billing live / prod config / DNS: no. Only the `demo-noor` emulator port changed (firebase/firebase.json:7, loopback).
+  - firestore.rules weaker: no. Only the comment changed, and it is still a single `match /{document=**} { allow read, write: if false; }`.
+  - New dependency: `@firebase/rules-unit-testing` and `firebase` as root devDependencies, with justification and exit path in spec.md and build.md. Neither is new since round 2.
+  - reviewStatus approved: no.
+  - Unsure: no.
+
+## For the merge queue (not blocking approval)
+- The previous squash-merge blocker (an uncommitted, human-owned change to package-lock.json on `main`) no longer shows: `git diff main -- package-lock.json` in the main checkout is empty. Run the merge-queue checks again before the squash merge.
+- Optional P3 follow-ups (security review): the compat SDK is not covered by the eslint ban (eslint.config.js:36), and no test covers the `@firebase/firestore` path (tooling/src/eslint-web-firestore-writes.test.ts:23).
+
+## For the human (ESCALATE only)
+n/a
+
+---
+
+## Round 2 (superseded)
+
+APPROVE
 Reason: Round 2 does exactly what the human rework asked (Firestore emulator 8080 -> 8180, plus the README). The committed `npm run test:emulator` now passes 67/67, both reviewers PASS, and no escalation trigger applies.
 # Decision — T012
 

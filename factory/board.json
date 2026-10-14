@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:44:46Z",
+  "updatedAt": "2026-10-14T09:51:11Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -111,7 +111,7 @@
       "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-a352c4d8fdeda16fa",
       "builderAgent": "a352c4d8fdeda16fa",
       "stage": "merge-queue",
-      "round": 2,
+      "round": 3,
       "reviewers": [
         "security",
         "code"
@@ -128,6 +128,14 @@
             "code": "PASS"
           },
           "note": "human rework: move Firestore emulator port to 8180"
+        },
+        {
+          "round": 2,
+          "reviews": {
+            "security": "PASS",
+            "code": "PASS"
+          },
+          "note": "rebase conflict at merge (eslint.config.js)"
         }
       ],
       "reason": null,
