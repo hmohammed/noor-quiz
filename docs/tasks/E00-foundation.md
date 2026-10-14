@@ -158,7 +158,7 @@ Skills: `deploy-release`
 **Acceptance criteria**
 
 - [x] `firebase projects:list` shows `noor-quiz-bec90`
-- [ ] GitHub environment `dev` exists with the deploy credentials
+- [x] GitHub environment `dev` exists with the deploy credentials
 - [x] `.firebaserc` maps alias `dev` to `noor-quiz-bec90`
 
 **Notes**
@@ -172,7 +172,9 @@ Skills: `deploy-release`
   - provider condition: `assertion.repository == 'hmohammed/noor-quiz'`
   - only subject `repo:hmohammed/noor-quiz:environment:dev` may impersonate the SA, so the deploy job **must** declare `environment: dev`
   - workflow needs `permissions: id-token: write` and `google-github-actions/auth@v2` with `workload_identity_provider` + `service_account`
-- GitHub environment `dev` variables (not secrets, neither value is sensitive): `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID=noor-quiz-bec90`.
+- GitHub environment `dev` exists and only branch `main` may deploy to it (deployment branch policy). Variables (not secrets, neither value is sensitive): `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID=noor-quiz-bec90`.
+- Branch protection on `main`: PR required (0 approvals), required check `unit`, linear history, no force-push or deletion. Admins may bypass (`enforce_admins: false`) so factory merges made locally can be pushed to `main`. When T004 adds the emulator and e2e jobs, add their check names to the required checks.
+- Open: budget alert not verified (Billing → Budgets & alerts).
 - `.firebaserc` lives in `firebase/` next to `firebase.json`, alias `dev` only, no `default` (so a bare `firebase deploy` cannot hit a real project).
 
 ## T005b

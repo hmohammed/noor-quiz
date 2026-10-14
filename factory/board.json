@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T00:00:00Z",
+  "updatedAt": "2026-10-14T09:10:00Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -78,13 +78,10 @@
   ],
   "queue": [
     "T003",
-    "T012"
+    "T012",
+    "T004"
   ],
   "blocked": [
-    {
-      "id": "T005a",
-      "reason": "human"
-    },
     {
       "id": "T005b",
       "reason": "human"
