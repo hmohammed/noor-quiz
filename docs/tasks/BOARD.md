@@ -24,8 +24,8 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T005](E00-foundation.md#t005) | Create Firebase projects and accounts | E00 | — |  | split | human |
 | [T005a](E00-foundation.md#t005a) | Dev Firebase project and GitHub deploy access | E00 | — |  | done | human |
 | [T005b](E00-foundation.md#t005b) | Staging and prod Firebase projects | E00 | T005a |  | todo | human |
-| [T004](E00-foundation.md#t004) | CI: emulator tests, e2e and auto-deploy to dev | E00 | T002, T005a |  | todo |  |
-| [T010](E01-identity-privacy.md#t010) | Sign in with Google and get my user record | E01 | T002, T003 | sec | todo |  |
+| [T004](E00-foundation.md#t004) | CI: emulator tests, e2e and auto-deploy to dev | E00 | T002, T005a |  | in-progress | factory |
+| [T010](E01-identity-privacy.md#t010) | Sign in with Google and get my user record | E01 | T002, T003 | sec | in-progress | factory |
 | [T011](E01-identity-privacy.md#t011) | Edit my profile: display name, locale, timezone | E01 | T010 |  | todo |  |
 | [T012](E01-identity-privacy.md#t012) | Firestore rules baseline: deny every client write | E01 | T002 | sec | done | factory |
 | [T013](E01-identity-privacy.md#t013) | Consent at first sign-in and delete my account | E01 | T011 | sec | todo |  |
