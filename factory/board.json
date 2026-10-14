@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:30:41Z",
+  "updatedAt": "2026-10-14T09:32:04Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -85,16 +85,16 @@
       "branch": "factory/T003-clock-config-errors",
       "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-ad31d0fba8b0573db",
       "builderAgent": "ad31d0fba8b0573db",
-      "stage": "review",
+      "stage": "needs-human",
       "round": 1,
       "reviewers": [
         "code"
       ],
       "reviews": {
-        "code": "pending"
+        "code": "PASS"
       },
       "history": [],
-      "reason": "needs human: add apps/api/.env.example (agent write denied) before merge",
+      "reason": "approver: apps/api/.env.example missing (agent write denied, PYTH-SEC-001); human must add it and run npm run dev once",
       "startedAt": "2026-10-14T09:10:48Z",
       "finishedAt": null
     },
