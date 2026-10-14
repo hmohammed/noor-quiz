@@ -7,7 +7,8 @@ permissions:
   contents: read
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # PR runs are superseded by newer pushes; a run on main (which may deploy) is never cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   unit:
     runs-on: ubuntu-latest
@@ -21,3 +22,132 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run build
+
+  emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - id: fbtools
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/firebase-tools'].version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ steps.fbtools.outputs.version }}
+      - run: npm run test:emulator
+
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changed="$(git diff --name-only "$BASE_SHA" HEAD)"
+          echo "$changed"
+          # apps/ is built from packages/ and firebase/, so changes there can break e2e too.
+          if printf '%s\n' "$changed" | grep -qE '^(apps/|packages/|firebase/|package\.json$|package-lock\.json$|\.github/workflows/ci\.yml$)'; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "e2e=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  e2e:
+    needs: changes
+    # `changes` is skipped on push, so the default success() check would skip e2e too.
+    # A skipped e2e on a PR counts as passing for branch protection.
+    if: >-
+      !cancelled() && needs.changes.result != 'failure' &&
+      (github.event_name == 'push' || needs.changes.outputs.e2e == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm exec -w @noor/web -- playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          CI: 'true'
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
+
+  deploy-dev:
+    needs: [unit, emulator, e2e]
+    # e2e runs after a skipped job (`changes`), so the implicit success() would skip this
+    # job; check every result explicitly instead.
+    if: >-
+      !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.unit.result == 'success' && needs.emulator.result == 'success' &&
+      needs.e2e.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: https://noor-quiz-bec90.web.app
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    env:
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Guard the target project
+        run: |
+          if [ "$FIREBASE_PROJECT_ID" != "noor-quiz-bec90" ]; then
+            echo "FIREBASE_PROJECT_ID must be noor-quiz-bec90 for deploy-dev" >&2
+            exit 1
+          fi
+      # Workload Identity Federation: no key and no secrets. Exports ADC for firebase-tools.
+      # The credentials file lands in the workspace root, outside apps/api/build and apps/web/dist.
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - run: npm run build
+      - name: Write the non-secret runtime env
+        run: printf 'NOOR_ENV=dev\n' > "apps/api/build/.env.${FIREBASE_PROJECT_ID}"
+      - name: Deploy Firestore rules and indexes
+        run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only firestore:rules,firestore:indexes
+      # --force lets the CLI set the Artifact Registry cleanup policy non-interactively and
+      # delete functions that were removed from codebase `api`.
+      - name: Deploy functions
+        run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only functions --force
+      - name: Deploy hosting
+        run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only hosting
+      - name: Smoke check /v1/health
+        run: curl -fsS --retry 10 --retry-delay 6 --retry-all-errors https://noor-quiz-bec90.web.app/v1/health | jq -e '.status == "ok"'
