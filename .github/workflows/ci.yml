@@ -132,7 +132,7 @@ jobs:
             echo "FIREBASE_PROJECT_ID must be noor-quiz-bec90 for deploy-dev" >&2
             exit 1
           fi
-      # Workload Identity Federation: no key and no secrets. Exports ADC for firebase-tools.
+      # Workload Identity Federation: no key and no secrets; it exports ADC for firebase-tools.
       # The credentials file lands in the workspace root, outside apps/api/build and apps/web/dist.
       - uses: google-github-actions/auth@v2
         with:
