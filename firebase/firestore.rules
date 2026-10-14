@@ -1,7 +1,9 @@
 rules_version = '2';
 
-// Deny everything until real rules and rules tests land (later task).
-// The browser never writes to Firestore (AGENT.md rule 3).
+// Baseline (T012): deny every client read and write. Tested in firebase/rules.test.ts.
+// The browser never writes to Firestore (AGENT.md rule 3); all writes go through the API.
+// Any future allow must be narrow (one named collection, never a wildcard), read-only,
+// scoped to members, and land with its own rules tests (see the firestore-data skill).
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {

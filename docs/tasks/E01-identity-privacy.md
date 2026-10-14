@@ -79,7 +79,9 @@ Skills: `firestore-data`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- `npm run test:emulator` exists (Firestore emulator via `emulators:exec`, runs `firebase/rules.test.ts`). T004 only needs to wire it into CI (needs Java 21 on the runner).
+- Add rules tests to `firebase/rules.test.ts` for every future collection or read rule.
+- Possible follow-up: the apps/web lint ban covers static imports/re-exports only, not dynamic `import('firebase/firestore')` or wrapper packages (e.g. `reactfire`).
 
 ## T013
 

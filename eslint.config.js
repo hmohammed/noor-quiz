@@ -23,6 +23,24 @@ const coreBanned = {
   ],
 };
 
+const webWriteMessage = 'The browser never writes to Firestore (AGENT.md rule 3). Call the API.';
+const firestoreWriteApis = [
+  'setDoc',
+  'addDoc',
+  'updateDoc',
+  'deleteDoc',
+  'writeBatch',
+  'runTransaction',
+];
+
+const webFirestoreWrites = {
+  paths: ['firebase/firestore', 'firebase/firestore/lite', '@firebase/firestore'].map((name) => ({
+    name,
+    importNames: firestoreWriteApis,
+    message: webWriteMessage,
+  })),
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -63,6 +81,11 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Disjoint from the core blocks above, so neither overrides the other.
+    files: ['apps/web/**/*.{ts,tsx}'],
+    rules: { 'no-restricted-imports': ['error', webFirestoreWrites] },
   },
   prettier,
 );

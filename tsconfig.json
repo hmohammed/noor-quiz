@@ -8,6 +8,7 @@
     { "path": "apps/web" },
     { "path": "apps/web/tsconfig.e2e.json" },
     { "path": "apps/workers" },
-    { "path": "tooling" }
+    { "path": "tooling" },
+    { "path": "firebase" }
   ]
 }

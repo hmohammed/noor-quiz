@@ -76,7 +76,7 @@ Use cases are plain functions: `submitAnswer(deps, input)` where `deps` holds po
 npm install                 # all workspaces
 npm run dev                 # emulators (demo-noor) + api bundle watch + web
 npm test                    # unit tests, all workspaces
-npm run test:emulator       # adapter + firestore rules tests (needs Firebase emulators)  # not yet — T004
+npm run test:emulator       # adapter + firestore rules tests (needs Firebase emulators)
 npm run test:e2e            # Playwright against local stack
 npm run lint && npm run typecheck
 npm run build               # api function bundle + web

@@ -40,6 +40,7 @@ If the repo lives on a Windows drive under WSL (`/mnt/c/...`), each new function
 ```
 npm test             # unit tests, all workspaces
 npm run test:e2e     # Playwright; starts the emulators and Vite itself if they are not running
+npm run test:emulator  # Firestore rules tests on the emulator (needs Java 21); port 8180 must be free
 npm run lint
 npm run typecheck
 npm run build        # API function bundle (apps/api/build) + web (apps/web/dist)
