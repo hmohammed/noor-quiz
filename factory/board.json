@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:10:48Z",
+  "updatedAt": "2026-10-14T09:30:41Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -83,14 +83,18 @@
       "phase": "P1",
       "tags": [],
       "branch": "factory/T003-clock-config-errors",
-      "worktree": null,
-      "builderAgent": null,
-      "stage": "spec",
+      "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-ad31d0fba8b0573db",
+      "builderAgent": "ad31d0fba8b0573db",
+      "stage": "review",
       "round": 1,
-      "reviewers": [],
-      "reviews": {},
+      "reviewers": [
+        "code"
+      ],
+      "reviews": {
+        "code": "pending"
+      },
       "history": [],
-      "reason": null,
+      "reason": "needs human: add apps/api/.env.example (agent write denied) before merge",
       "startedAt": "2026-10-14T09:10:48Z",
       "finishedAt": null
     },
@@ -104,14 +108,20 @@
         "sec"
       ],
       "branch": "factory/T012-rules-deny-writes",
-      "worktree": null,
-      "builderAgent": null,
-      "stage": "spec",
+      "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-a352c4d8fdeda16fa",
+      "builderAgent": "a352c4d8fdeda16fa",
+      "stage": "needs-human",
       "round": 1,
-      "reviewers": [],
-      "reviews": {},
+      "reviewers": [
+        "security",
+        "code"
+      ],
+      "reviews": {
+        "security": "PASS",
+        "code": "PASS"
+      },
       "history": [],
-      "reason": null,
+      "reason": "approver: test:emulator not yet run on default port 8080 (port busy); human must run it",
       "startedAt": "2026-10-14T09:10:48Z",
       "finishedAt": null
     }
