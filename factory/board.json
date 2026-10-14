@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
-  "stopping": false,
-  "updatedAt": "2026-10-14T10:00:19Z",
+  "stopping": true,
+  "updatedAt": "2026-10-14T10:00:46Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
