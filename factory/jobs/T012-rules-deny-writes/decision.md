@@ -19,3 +19,6 @@ Reason: The committed `npm run test:emulator` has never been seen passing, becau
 1. **Run the real script once.** On a machine where 127.0.0.1:8080 is free, run `npm run test:emulator` (package.json:18) on branch `factory/T012-rules-deny-writes` and expect 67/67. Right now the WSL host has something listening on `*:8080` that is outside this session, so neither the builder nor I could run it. If it passes, this can be approved as is.
 2. **Optional P3 hardening (security review nit, not blocking).** The apps/web ban at eslint.config.js:34-40 covers only `firebase/firestore`, `firebase/firestore/lite` and `@firebase/firestore`. The compat SDK (`firebase/compat/*`, `.doc().set()`) and `@firebase/firestore/lite` are not covered. `firebase` is now a hoisted root devDependency, so apps/web could import them without declaring them. The deny-all rules still block the writes. Either accept this, or add a `patterns` group, or add it to the T012 follow-up note (docs/tasks/E01-identity-privacy.md:84).
 3. **Optional P3.** tooling/src/eslint-web-firestore-writes.test.ts:23: `sources` does not include `@firebase/firestore`, so dropping that path from the config would not fail any test.
+
+---
+Approved by human (hmohammed) via `/factory approve T012` on 2026-10-14T09:34:47Z.
