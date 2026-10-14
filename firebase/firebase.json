@@ -1,6 +1,14 @@
 {
-  "functions": [{ "source": "../apps/api", "codebase": "api", "runtime": "nodejs22" }],
+  "functions": [{ "source": "../apps/api/build", "codebase": "api", "runtime": "nodejs22" }],
   "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
+  "hosting": {
+    "public": "../apps/web/dist",
+    "ignore": ["**/.*"],
+    "rewrites": [
+      { "source": "/v1/**", "function": { "functionId": "api", "region": "europe-west1" } },
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
   "emulators": {
     "singleProjectMode": true,
     "auth": { "host": "127.0.0.1", "port": 9099 },

@@ -4,8 +4,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { getRequestListener } from '@hono/node-server';
 import { createApp } from './app';
 import { createComposition } from './composition';
-
-const REGION = 'europe-west1';
+import { REGION } from './region';
 
 // Runs at module load: an invalid environment throws ConfigError here, so the
 // function fails fast at cold start instead of on the first request.
