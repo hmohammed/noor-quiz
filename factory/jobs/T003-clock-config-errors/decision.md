@@ -30,3 +30,6 @@ Reason: Definition of Done not met. `apps/api/.env.example` is missing from the 
 4. Optional nit from the code review: `package.json:19` has `&&FUNCTIONS_DISCOVERY_TIMEOUT=60` with no space after `&&`. It works, but restore the space.
 
 Once 1 and 2 are done, nothing else in the diff blocks approval.
+
+---
+Approved by human (hmohammed) via `/factory approve T003` on 2026-10-14T09:42:02Z. apps/api/.env.example added by the human in b95a2c5. The npm run dev / .env.local check was not reported as done.

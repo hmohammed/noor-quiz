@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:34:47Z",
+  "updatedAt": "2026-10-14T09:42:02Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -85,7 +85,7 @@
       "branch": "factory/T003-clock-config-errors",
       "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-ad31d0fba8b0573db",
       "builderAgent": "ad31d0fba8b0573db",
-      "stage": "needs-human",
+      "stage": "merge-queue",
       "round": 1,
       "reviewers": [
         "code"
@@ -94,7 +94,7 @@
         "code": "PASS"
       },
       "history": [],
-      "reason": "approver: apps/api/.env.example missing (agent write denied, PYTH-SEC-001); human must add it and run npm run dev once",
+      "reason": null,
       "startedAt": "2026-10-14T09:10:48Z",
       "finishedAt": null
     },
@@ -110,17 +110,26 @@
       "branch": "factory/T012-rules-deny-writes",
       "worktree": "/mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/agent-a352c4d8fdeda16fa",
       "builderAgent": "a352c4d8fdeda16fa",
-      "stage": "merge-queue",
-      "round": 1,
+      "stage": "review",
+      "round": 2,
       "reviewers": [
         "security",
         "code"
       ],
       "reviews": {
-        "security": "PASS",
-        "code": "PASS"
+        "security": "pending",
+        "code": "pending"
       },
-      "history": [],
+      "history": [
+        {
+          "round": 1,
+          "reviews": {
+            "security": "PASS",
+            "code": "PASS"
+          },
+          "note": "human rework: move Firestore emulator port to 8180"
+        }
+      ],
       "reason": null,
       "startedAt": "2026-10-14T09:10:48Z",
       "finishedAt": null

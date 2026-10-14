@@ -53,3 +53,18 @@ Worktree: /mnt/c/Users/hassen.mohammed/Downloads/noor-quiz/.claude/worktrees/age
 - The namespace import (`import * as fs`) produces exactly one `no-restricted-imports` error with this ESLint version, so all tests assert exactly one severity-2 message that contains "AGENT.md rule 3".
 - The identities seed uses the fixed ULID-shaped placeholder `01JAAAAAAAAAAAAAAAAAAAAAAA` for "01J...". All dates are fixed ISO strings; there is no `new Date()`.
 - npm printed one EBADENGINE warning (a transitive package wants Node ^20.19 || ^22.13; the local Node is 20.18.3). It is harmless here because CI and engines target Node 22.
+
+## Round 2
+- round-1/rework.md: move the Firestore emulator port 8080 → 8180 → fixed in firebase/firebase.json (Firestore only; auth 9099, functions 5001 and ui 4000 unchanged) (cb1745c)
+- round-1/rework.md: update other hard-coded 8080 references → fixed in README.md line 43 ("port 8180 must be free") (cb1745c). `git grep 8080` outside `factory/` now finds nothing. The remaining hits are historical factory records (T002 spec, T012 decision and reviews, and the round-1 text of this file), which I left unchanged. No e2e config, script or test hard-codes the Firestore port: rules.test.ts reads `FIRESTORE_EMULATOR_HOST`.
+- round-1/rework.md: run `npm run test:emulator` unchanged, as committed → 67/67 pass on 127.0.0.1:8180, "Script exited successfully (code 0)". This replaces the alternate-port verification from round 1.
+
+| command | result |
+| --- | --- |
+| npm run test:emulator | pass (67/67, committed script, port 8180) |
+| npm run lint | pass |
+| npm run typecheck | pass |
+| npm test | pass (13 files, 80 tests) |
+
+Commits (after rebase onto ef1c7d2): 951a41c, 3a8eca3, ac10c53 (round 1), cb1745c T012: move Firestore emulator port from 8080 to 8180.
+The P3 lint nits from the security review were not changed: the rework note puts them out of scope.
