@@ -1,7 +1,7 @@
 {
   "maxParallel": 2,
   "stopping": false,
-  "updatedAt": "2026-10-14T09:10:00Z",
+  "updatedAt": "2026-10-14T09:10:48Z",
   "gates": {
     "P1": "closed",
     "P2": "closed",
@@ -74,11 +74,49 @@
       "reason": null,
       "startedAt": "2026-10-11T18:02:34Z",
       "finishedAt": "2026-10-11T19:19:08Z"
+    },
+    {
+      "id": "T003",
+      "slug": "clock-config-errors",
+      "title": "Clock port, typed config and domain errors",
+      "epic": "E00",
+      "phase": "P1",
+      "tags": [],
+      "branch": "factory/T003-clock-config-errors",
+      "worktree": null,
+      "builderAgent": null,
+      "stage": "spec",
+      "round": 1,
+      "reviewers": [],
+      "reviews": {},
+      "history": [],
+      "reason": null,
+      "startedAt": "2026-10-14T09:10:48Z",
+      "finishedAt": null
+    },
+    {
+      "id": "T012",
+      "slug": "rules-deny-writes",
+      "title": "Firestore rules baseline: deny every client write",
+      "epic": "E01",
+      "phase": "P1",
+      "tags": [
+        "sec"
+      ],
+      "branch": "factory/T012-rules-deny-writes",
+      "worktree": null,
+      "builderAgent": null,
+      "stage": "spec",
+      "round": 1,
+      "reviewers": [],
+      "reviews": {},
+      "history": [],
+      "reason": null,
+      "startedAt": "2026-10-14T09:10:48Z",
+      "finishedAt": null
     }
   ],
   "queue": [
-    "T003",
-    "T012",
     "T004"
   ],
   "blocked": [
