@@ -4,6 +4,6 @@ export default defineProject({
   test: {
     name: 'web',
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
   },
 });

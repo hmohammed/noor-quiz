@@ -1,4 +1,4 @@
-import { HealthResponse } from '@noor/contracts';
+import { HealthResponse, MeResponse } from '@noor/contracts';
 
 /** Any failure talking to the API: network, non-2xx status, non-JSON body or contract mismatch. */
 export class ApiError extends Error {
@@ -19,6 +19,8 @@ export interface ApiClientOptions {
 
 export interface ApiClient {
   getHealth(init?: { signal?: AbortSignal }): Promise<HealthResponse>;
+  /** The signed-in user. The caller passes the ID token, so this module stays Firebase-free. */
+  getMe(init: { idToken: string; signal?: AbortSignal }): Promise<MeResponse>;
 }
 
 interface Schema<T> {
@@ -31,13 +33,17 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const doFetch: typeof globalThis.fetch =
     options.fetch ?? ((...args) => globalThis.fetch(...args));
 
-  async function getJson<T>(path: string, schema: Schema<T>, signal?: AbortSignal): Promise<T> {
+  async function getJson<T>(
+    path: string,
+    schema: Schema<T>,
+    init: { signal?: AbortSignal; headers?: Record<string, string> } = {},
+  ): Promise<T> {
     let res: Response;
     try {
       res = await doFetch(`${baseUrl}${path}`, {
         method: 'GET',
-        headers: { accept: 'application/json' },
-        signal,
+        headers: { ...init.headers, accept: 'application/json' },
+        signal: init.signal,
       });
     } catch (cause) {
       throw new ApiError(`Network error for GET ${path}`, { cause });
@@ -61,7 +67,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   }
 
   return {
-    getHealth: (init) => getJson('/v1/health', HealthResponse, init?.signal),
+    getHealth: (init) => getJson('/v1/health', HealthResponse, { signal: init?.signal }),
+    getMe: ({ idToken, signal }) =>
+      getJson('/v1/me', MeResponse, {
+        signal,
+        headers: { authorization: `Bearer ${idToken}` },
+      }),
   };
 }
 

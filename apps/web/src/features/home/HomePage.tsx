@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
 import { t } from '../../i18n/t';
+import { AuthButton } from '../auth/AuthButton';
 
 type ApiStatus = 'checking' | 'ok' | 'unreachable';
 
@@ -27,10 +28,15 @@ export function HomePage() {
   }, []);
 
   return (
-    <main className="page">
-      <p role="status" data-testid="api-status" className={`api-status api-status--${status}`}>
-        {t(statusKey[status])}
-      </p>
-    </main>
+    <>
+      <header className="site-header">
+        <AuthButton />
+      </header>
+      <main className="page">
+        <p role="status" data-testid="api-status" className={`api-status api-status--${status}`}>
+          {t(statusKey[status])}
+        </p>
+      </main>
+    </>
   );
 }
