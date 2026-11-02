@@ -108,6 +108,13 @@ Skills: `vertical-slice`, `i18n-rtl`
 
 - [ ] e2e with the auth emulator: sign in → see my name.
 
+**Notes**
+
+- `apps/web/src/auth/session.ts` is the only Firebase importer (`apps/web/src/auth/firebase-boundary.test.ts` enforces it). Get a token with `getIdToken()` and pass it to `apiClient` methods; never read the Firebase user.
+- T011: the header (`features/auth/AuthButton.tsx`) shows `MeResponse.displayName` from `/v1/me`. After a profile edit, refresh that state (today it reloads only on an auth change). There is no shared auth store yet; add one only if a second component needs the session.
+- Follow-up (not in this task): CI / deploy-dev need the real `noor-dev` `VITE_FIREBASE_*` keys and Google enabled as a provider. Without them the built app shows `auth.unavailable`.
+- The e2e blocks the Auth emulator page's CDN assets (unpkg, Google Fonts); the page works without them and otherwise stalls on slow or offline networks.
+
 ## T011
 
 **Edit my profile: display name, locale, timezone**
