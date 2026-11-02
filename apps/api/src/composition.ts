@@ -1,5 +1,8 @@
 import type { Deps } from '@noor/core';
+import { getAdminFirestore } from './adapters/firebase/firestore';
+import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
+import { UlidIdGenerator } from './adapters/system/ulid-id-generator';
 import { loadConfig, type Config } from './config';
 
 /** Everything the HTTP app needs, built once per process. */
@@ -18,6 +21,11 @@ export function createComposition(
   opts: { version: string },
 ): AppRoot {
   const config = loadConfig(env);
-  const deps: Deps = { clock: new SystemClock() };
+  const clock = new SystemClock();
+  const deps: Deps = {
+    clock,
+    ids: new UlidIdGenerator(clock),
+    users: new FirestoreUserRepo(getAdminFirestore()),
+  };
   return { config, deps, version: opts.version };
 }
