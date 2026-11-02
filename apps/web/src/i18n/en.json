@@ -7,5 +7,20 @@
   "auth.loading": "Signing in…",
   "auth.noName": "Signed in",
   "auth.error": "Sign-in failed. Please try again.",
-  "auth.unavailable": "Sign-in is not available right now."
+  "auth.unavailable": "Sign-in is not available right now.",
+  "nav.home": "Home",
+  "nav.profile": "Profile",
+  "profile.title": "Your profile",
+  "profile.displayName": "Display name",
+  "profile.displayNameHint": "Letters and spaces, 2–32 characters.",
+  "profile.locale": "Language",
+  "profile.localeUnset": "Not set",
+  "profile.timezone": "Timezone",
+  "profile.save": "Save",
+  "profile.saving": "Saving…",
+  "profile.saved": "Profile saved.",
+  "profile.loading": "Loading your profile…",
+  "profile.signedOut": "Sign in to edit your profile.",
+  "profile.error.displayName": "Use letters and spaces only, 2–32 characters.",
+  "profile.error.generic": "Could not save your profile. Please try again."
 }

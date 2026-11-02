@@ -98,7 +98,12 @@ describe('GET /v1/me', () => {
     const body = MeResponse.parse(await res.json());
     expect(isUlid(body.userId)).toBe(true);
     const stored = await deps.users.getByIdentity({ provider: 'firebase', subject: 'uid-alice' });
-    expect(body).toEqual({ userId: stored?.id, displayName: 'Alice', locale: null, timezone: null });
+    expect(body).toEqual({
+      userId: stored?.id,
+      displayName: 'Alice',
+      locale: null,
+      timezone: null,
+    });
   });
 
   it('returns the same userId for repeated and concurrent requests of one identity', async () => {

@@ -11,6 +11,15 @@ const json = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json' },
   });
 
+const ULID = '01J9Z8X7W6V5T4S3R2Q1P0NMKH';
+const me = (overrides: Record<string, unknown> = {}) => ({
+  userId: ULID,
+  displayName: null,
+  locale: null,
+  timezone: null,
+  ...overrides,
+});
+
 describe('apiClient.getHealth', () => {
   it('calls GET {baseUrl}/v1/health and returns the parsed body', async () => {
     const fetch = fakeFetch(json({ status: 'ok', version: '0.1.0' }));
@@ -56,26 +65,26 @@ describe('apiClient.getHealth', () => {
     await expect(createApiClient({ fetch }).getHealth()).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('sends no Authorization header', async () => {
+  it('sends no Authorization header and no body', async () => {
     const fetch = fakeFetch(json({ status: 'ok', version: '1' }));
     await createApiClient({ fetch }).getHealth();
-    const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
+    const init = fetch.mock.calls[0]?.[1];
+    const headers = new Headers(init?.headers);
     expect(headers.has('authorization')).toBe(false);
+    expect(headers.has('content-type')).toBe(false);
     expect(headers.get('accept')).toBe('application/json');
+    expect(init?.body).toBeUndefined();
   });
 });
 
 describe('apiClient.getMe', () => {
-  const ULID = '01J9Z8X7W6V5T4S3R2Q1P0NMKH';
-
   it('calls GET {baseUrl}/v1/me with the bearer token and returns the parsed body', async () => {
-    const fetch = fakeFetch(json({ userId: ULID, displayName: 'Amina' }));
+    const fetch = fakeFetch(json(me({ displayName: 'Amina' })));
     const client = createApiClient({ baseUrl: 'http://api.test', fetch });
 
-    await expect(client.getMe({ idToken: 'tok.en.value' })).resolves.toEqual({
-      userId: ULID,
-      displayName: 'Amina',
-    });
+    await expect(client.getMe({ idToken: 'tok.en.value' })).resolves.toEqual(
+      me({ displayName: 'Amina' }),
+    );
 
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = fetch.mock.calls[0] ?? [];
@@ -87,15 +96,12 @@ describe('apiClient.getMe', () => {
   });
 
   it('returns displayName: null as is', async () => {
-    const client = createApiClient({ fetch: fakeFetch(json({ userId: ULID, displayName: null })) });
-    await expect(client.getMe({ idToken: 't' })).resolves.toEqual({
-      userId: ULID,
-      displayName: null,
-    });
+    const client = createApiClient({ fetch: fakeFetch(json(me())) });
+    await expect(client.getMe({ idToken: 't' })).resolves.toEqual(me());
   });
 
   it('passes the abort signal through', async () => {
-    const fetch = fakeFetch(json({ userId: ULID, displayName: null }));
+    const fetch = fakeFetch(json(me()));
     const controller = new AbortController();
     await createApiClient({ fetch }).getMe({ idToken: 't', signal: controller.signal });
     expect(fetch.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
@@ -112,7 +118,7 @@ describe('apiClient.getMe', () => {
 
   it('throws ApiError when the body has an extra key (strict contract)', async () => {
     const client = createApiClient({
-      fetch: fakeFetch(json({ userId: ULID, displayName: 'Amina', uid: 'firebase-uid' })),
+      fetch: fakeFetch(json(me({ displayName: 'Amina', uid: 'firebase-uid' }))),
     });
     await expect(client.getMe({ idToken: 't' })).rejects.toBeInstanceOf(ApiError);
   });
@@ -122,6 +128,52 @@ describe('apiClient.getMe', () => {
       throw new TypeError('network down');
     });
     await expect(createApiClient({ fetch }).getMe({ idToken: 't' })).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
+});
+
+describe('apiClient.updateMe', () => {
+  it('sends PATCH /v1/me with the bearer token and a JSON body and returns the parsed body', async () => {
+    const fetch = fakeFetch(json(me({ displayName: 'ሀሰን', timezone: 'Africa/Addis_Ababa' })));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(
+      client.updateMe({
+        idToken: 'tok.en.value',
+        body: { displayName: 'ሀሰን', timezone: 'Africa/Addis_Ababa' },
+      }),
+    ).resolves.toEqual(me({ displayName: 'ሀሰን', timezone: 'Africa/Addis_Ababa' }));
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe('http://api.test/v1/me');
+    expect(init?.method).toBe('PATCH');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(headers.get('content-type')).toBe('application/json');
+    expect(headers.get('accept')).toBe('application/json');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      displayName: 'ሀሰን',
+      timezone: 'Africa/Addis_Ababa',
+    });
+  });
+
+  it('throws ApiError with status 400 on a 400 response', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ error: { code: 'VALIDATION', message: 'Invalid request' } }, 400)),
+    });
+    const err = await client
+      .updateMe({ idToken: 't', body: { displayName: '😀😀' } })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(400);
+  });
+
+  it('throws ApiError when the body breaks the contract', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json(me({ locale: 'fr' }))),
+    });
+    await expect(client.updateMe({ idToken: 't', body: { locale: 'en' } })).rejects.toBeInstanceOf(
       ApiError,
     );
   });

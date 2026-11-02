@@ -166,7 +166,13 @@ describe('FirestoreUserRepo (emulator only)', () => {
   });
 
   it('reads a users doc written before T011 (no locale/timezone) as null and can update it', async () => {
-    const legacy = { id: ULID, displayName: 'Alice', createdAt: AT, updatedAt: AT, schemaVersion: 1 };
+    const legacy = {
+      id: ULID,
+      displayName: 'Alice',
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    };
     await db.collection('users').doc(ULID).set(legacy);
 
     expect(await repo.getById(ULID)).toStrictEqual({ ...legacy, locale: null, timezone: null });
