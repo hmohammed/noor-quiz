@@ -55,7 +55,9 @@ export async function signIn(): Promise<void> {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (err) {
     const code = err && typeof err === 'object' && 'code' in err ? err.code : undefined;
-    throw new SessionError(typeof code === 'string' && cancelledCodes.has(code) ? 'cancelled' : 'failed');
+    throw new SessionError(
+      typeof code === 'string' && cancelledCodes.has(code) ? 'cancelled' : 'failed',
+    );
   }
 }
 

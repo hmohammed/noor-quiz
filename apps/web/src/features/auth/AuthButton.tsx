@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiClient } from '../../api/client';
-import { SessionError, getIdToken, isConfigured, onChange, signIn, signOut } from '../../auth/session';
+import {
+  SessionError,
+  getIdToken,
+  isConfigured,
+  onChange,
+  signIn,
+  signOut,
+} from '../../auth/session';
 import { AuthButtonView, type AuthViewState } from './AuthButtonView';
 
 /** Header sign-in control. Shows only what `/v1/me` returns, never Firebase user data. */
@@ -42,7 +49,9 @@ export function AuthButton() {
           (me) => {
             if (!isCurrent()) return;
             setState(
-              me === null ? { kind: 'signed-out' } : { kind: 'signed-in', displayName: me.displayName },
+              me === null
+                ? { kind: 'signed-out' }
+                : { kind: 'signed-in', displayName: me.displayName },
             );
           },
           () => {

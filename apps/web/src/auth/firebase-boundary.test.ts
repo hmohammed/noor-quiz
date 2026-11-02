@@ -14,8 +14,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 // Static `import … from 'x'`, side-effect `import 'x'`, `export … from 'x'` and dynamic `import('x')`.
-const specifierPattern =
-  /(?:\bfrom\s*|\bimport\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm;
+const specifierPattern = /(?:\bfrom\s*|\bimport\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm;
 
 function importsOf(file: string): string[] {
   const code = readFileSync(file, 'utf8');
@@ -23,7 +22,9 @@ function importsOf(file: string): string[] {
 }
 
 const isFirebase = (specifier: string) =>
-  specifier === 'firebase' || specifier.startsWith('firebase/') || specifier.startsWith('@firebase/');
+  specifier === 'firebase' ||
+  specifier.startsWith('firebase/') ||
+  specifier.startsWith('@firebase/');
 
 describe('Firebase boundary in apps/web/src', () => {
   const files = sourceFiles(srcDir).map((path) => ({
