@@ -170,7 +170,7 @@ Skills: `deploy-release`
 - **No service account key exists.** CI authenticates with Workload Identity Federation:
   - provider: `projects/1048700486127/locations/global/workloadIdentityPools/github/providers/noor-quiz`
   - provider condition: `assertion.repository == 'hmohammed/noor-quiz'`
-  - only subject `repo:hmohammed/noor-quiz:environment:dev` may impersonate the SA, so the deploy job **must** declare `environment: dev`
+  - only subject `repo:hmohammed@512674/noor-quiz@1414586676:environment:dev` may impersonate the SA (GitHub immutable OIDC subject; this repo was created after 15 Jul 2026). The deploy job **must** declare `environment: dev`
   - workflow needs `permissions: id-token: write` and `google-github-actions/auth@v2` with `workload_identity_provider` + `service_account`
 - GitHub environment `dev` exists and only branch `main` may deploy to it (deployment branch policy). Variables (not secrets, neither value is sensitive): `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID=noor-quiz-bec90`.
 - Branch protection on `main`: PR required (0 approvals), required check `unit`, linear history, no force-push or deletion. Admins may bypass (`enforce_admins: false`) so factory merges made locally can be pushed to `main`. When T004 adds the emulator and e2e jobs, add their check names to the required checks.
