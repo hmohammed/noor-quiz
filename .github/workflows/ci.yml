@@ -147,19 +147,34 @@ jobs:
       - run: npm run build
       - name: Write the non-secret runtime env
         run: printf 'NOOR_ENV=dev\n' > "apps/api/build/.env.${FIREBASE_PROJECT_ID}"
+      # firebase-tools treats the --config directory as the project root and
+      # rejects paths that climb out of it. firebase/firebase.json is one level
+      # down, so ../apps/api/build is refused. Rewrite those paths from the repo root.
+      - name: Write a repo-root deploy config
+        run: |
+          node --input-type=module << 'EOF'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const cfg = JSON.parse(readFileSync('firebase/firebase.json', 'utf8'));
+          delete cfg.emulators;
+          cfg.functions[0].source = 'apps/api/build';
+          cfg.firestore.rules = 'firebase/firestore.rules';
+          cfg.firestore.indexes = 'firebase/firestore.indexes.json';
+          cfg.hosting.public = 'apps/web/dist';
+          writeFileSync('firebase.json', JSON.stringify(cfg, null, 2) + '\n');
+          EOF
       - name: Deploy Firestore rules and indexes
         env:
           FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
-        run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only firestore:rules,firestore:indexes
+        run: npx firebase deploy --config firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only firestore:rules,firestore:indexes
       # --force lets the CLI set the Artifact Registry cleanup policy non-interactively and
       # delete functions that were removed from codebase `api`.
       - name: Deploy functions
         env:
           FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
-        run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only functions --force
+        run: npx firebase deploy --config firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only functions --force
       - name: Deploy hosting
         env:
           FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
-        run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only hosting
+        run: npx firebase deploy --config firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only hosting
       - name: Smoke check /v1/health
         run: curl -fsS --retry 10 --retry-delay 6 --retry-all-errors https://noor-quiz-bec90.web.app/v1/health | jq -e '.status == "ok"'

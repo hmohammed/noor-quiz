@@ -6,6 +6,8 @@ coverage/
 .env
 .env.*
 !.env.example
+# Written by deploy-dev from firebase/firebase.json so paths stay inside the repo root.
+/firebase.json
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
