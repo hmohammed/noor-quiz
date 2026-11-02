@@ -27,7 +27,11 @@ Skills: `vertical-slice`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- Lives in `packages/core/src/season/season-rules.ts` (+ `time/local-date.ts`, `zonedInstant` in `time/zoned.ts`, `season/hijri.ts`); all exported from `@noor/core`.
+- Day `d` has local date `startDate + (d − 1)` calendar days. Window = `[opensAtLocal on that date, closesAtLocal)`; when `closesAtLocal <= opensAtLocal` the close is on the next local date (`00:00`/`00:00` is a 24-local-hour window). Local time → instant uses "compatible" DST rules: a skipped time moves forward by the gap, a repeated time takes the earlier instant.
+- A day is in effect from its open until the next day's open (the last day until its close). `dayIndexAt` is `null` before day 1 opens and from the last close on; `seasonState` is `upcoming` / `active { dayIndex, open }` / `ended`.
+- For T031: the zod season contract should mirror `assertValidSeason` — `startDate` strict real `YYYY-MM-DD`, `lengthDays` integer 1..366, `timezone` accepted by `isValidTimeZone`, `opensAtLocal`/`closesAtLocal` `HH:mm` 00:00–23:59 with ASCII digits. Call `assertValidSeason` in the use case as well. Answer routes must use `isOpen(season, dayIndexAt(season, clock.now()), now)` and never a client-sent day.
+- `suggestRamadan` / `nextRamadanSuggestion` are advisory (Umm al-Qura via `Intl`); the stored `startDate`/`lengthDays` is always what the admin confirms.
 
 ## T031
 

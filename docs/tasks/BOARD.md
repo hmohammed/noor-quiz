@@ -35,7 +35,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T020](E02-communities.md#t020) | Create a community and list mine | E02 | T013 | sec | todo |  |
 | [T021](E02-communities.md#t021) | Invite link and join | E02 | T020 | sec | todo |  |
 | [T022](E02-communities.md#t022) | Members list and role management | E02 | T021 | sec | todo |  |
-| [T030](E03-seasons-questions.md#t030) | Season rules in core: days, open and close times | E03 | T003 |  | todo |  |
+| [T030](E03-seasons-questions.md#t030) | Season rules in core: days, open and close times | E03 | T003 |  | done | factory |
 | [T031](E03-seasons-questions.md#t031) | Create a season for a community | E03 | T030, T020 |  | todo |  |
 | [T032](E03-seasons-questions.md#t032) | Draft multiple-choice questions | E03 | T031 |  | todo |  |
 | [T033](E03-seasons-questions.md#t033) | Review status and schedule questions to season days | E03 | T032, T022 | sec | todo |  |
