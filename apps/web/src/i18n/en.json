@@ -1,5 +1,11 @@
 {
   "home.api.checking": "Checking API…",
   "home.api.ok": "API ok",
-  "home.api.unreachable": "API unreachable"
+  "home.api.unreachable": "API unreachable",
+  "auth.signIn": "Sign in with Google",
+  "auth.signOut": "Sign out",
+  "auth.loading": "Signing in…",
+  "auth.noName": "Signed in",
+  "auth.error": "Sign-in failed. Please try again.",
+  "auth.unavailable": "Sign-in is not available right now."
 }
