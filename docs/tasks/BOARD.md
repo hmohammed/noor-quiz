@@ -27,7 +27,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T004](E00-foundation.md#t004) | CI: emulator tests, e2e and auto-deploy to dev | E00 | T002, T005a |  | done | factory |
 | [T010](E01-identity-privacy.md#t010) | Sign in with Google and get my user record | E01 | T002, T003 | sec | split | factory |
 | [T010a](E01-identity-privacy.md#t010a) | Own user and identity records: getOrCreateUser with a transaction | E01 | T002, T003 | sec | done | factory |
-| [T010b](E01-identity-privacy.md#t010b) | Verify the token and return GET /v1/me | E01 | T010a | sec | todo |  |
+| [T010b](E01-identity-privacy.md#t010b) | Verify the token and return GET /v1/me | E01 | T010a | sec | done | factory |
 | [T010c](E01-identity-privacy.md#t010c) | Web: sign in with Google and see my name | E01 | T010b | sec | todo |  |
 | [T011](E01-identity-privacy.md#t011) | Edit my profile: display name, locale, timezone | E01 | T010 |  | todo |  |
 | [T012](E01-identity-privacy.md#t012) | Firestore rules baseline: deny every client write | E01 | T002 | sec | done | factory |

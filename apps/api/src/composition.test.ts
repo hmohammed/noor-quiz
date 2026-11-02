@@ -1,12 +1,13 @@
 import { getApps } from 'firebase-admin/app';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FirebaseAuthVerifier } from './adapters/firebase/auth-verifier';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
 import { UlidIdGenerator } from './adapters/system/ulid-id-generator';
 import { createComposition } from './composition';
 import { ConfigError } from './config';
 
-const built = vi.hoisted(() => ({ clocks: 0, firestores: 0 }));
+const built = vi.hoisted(() => ({ auths: 0, clocks: 0, firestores: 0 }));
 
 // Same SystemClock, but counts constructions so we can prove no adapter is built
 // when config is invalid.
@@ -32,8 +33,20 @@ vi.mock('./adapters/firebase/firestore', async (importOriginal) => {
   };
 });
 
+// Same admin Auth, counted the same way.
+vi.mock('./adapters/firebase/auth', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./adapters/firebase/auth')>();
+  return {
+    getAdminAuth: () => {
+      built.auths += 1;
+      return real.getAdminAuth();
+    },
+  };
+});
+
 describe('createComposition', () => {
   beforeEach(() => {
+    built.auths = 0;
     built.clocks = 0;
     built.firestores = 0;
   });
@@ -44,17 +57,20 @@ describe('createComposition', () => {
   ])('throws ConfigError before building any deps (%s)', (_label, env) => {
     const appsBefore = getApps().length;
     expect(() => createComposition(env, { version: 'test-1' })).toThrow(ConfigError);
+    expect(built.auths).toBe(0);
     expect(built.clocks).toBe(0);
     expect(built.firestores).toBe(0);
     expect(getApps()).toHaveLength(appsBefore);
   });
 
-  it('wires the system adapters, Firestore repo and typed config with a valid env', () => {
+  it('wires the system adapters, Firebase adapters and typed config with a valid env', () => {
     const root = createComposition({ NOOR_ENV: 'local', OTHER: 'x' }, { version: 'test-1' });
 
+    expect(root.deps.auth).toBeInstanceOf(FirebaseAuthVerifier);
     expect(root.deps.clock).toBeInstanceOf(SystemClock);
     expect(root.deps.ids).toBeInstanceOf(UlidIdGenerator);
     expect(root.deps.users).toBeInstanceOf(FirestoreUserRepo);
+    expect(built.auths).toBe(1);
     expect(built.clocks).toBe(1);
     expect(built.firestores).toBe(1);
     expect(root.config).toEqual({ env: 'local', logLevel: 'info' });

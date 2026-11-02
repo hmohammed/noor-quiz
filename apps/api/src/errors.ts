@@ -1,4 +1,4 @@
-import type { Hono } from 'hono';
+import type { Env, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { isDomainError, type DomainErrorCode } from '@noor/core';
 import type { ErrorResponse } from '@noor/contracts';
@@ -45,7 +45,7 @@ export function toErrorResponse(err: unknown): {
 }
 
 /** Installs the single error handler and the JSON 404 on the root app. */
-export function installErrorHandling(app: Hono): void {
+export function installErrorHandling<E extends Env>(app: Hono<E>): void {
   app.onError((err, c) => {
     if (!isDomainError(err) || err.code === 'INTERNAL') {
       // Log the error only: never the request body or headers.
