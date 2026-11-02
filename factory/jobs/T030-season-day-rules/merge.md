@@ -38,3 +38,24 @@ New commits (`origin/main..HEAD` before the records commit):
 - 5d10f73 T030: Umm al-Qura Ramadan start suggestion
 - 9d9722d T030: export season rules and time helpers from @noor/core
 - 186758c T030: notes for T031 in E03
+
+## 3. job records
+
+```
+git commit -m "factory: T030 records"
+```
+
+Result: `b279046`. BOARD.md sets T030 to `done` / `factory`.
+
+## 4. checks
+
+Ran in the worktree after the records commit:
+
+| command | result |
+| --- | --- |
+| npm install | pass (up to date) |
+| npm run lint | pass |
+| npm run typecheck | pass |
+| npm test | pass — 35 files, 462 tests |
+| npm run test:emulator | not relevant (no adapter or rules change) |
+| npm run test:e2e | not relevant (no UI) |
