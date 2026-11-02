@@ -11,7 +11,7 @@
 - `npm install` — pass
 - `npm run lint` — pass
 - `npm run typecheck` — pass
-- `npm test` — pass (36 files, 319 tests)
+- `npm test` — pass (39 files, 514 tests, after rebase onto main)
 - `npm run test:emulator` — pass (3 files, 101 tests, Auth and Firestore emulators)
 - `npm run test:e2e` — not relevant (no UI)
 
