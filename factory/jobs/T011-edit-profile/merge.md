@@ -38,3 +38,6 @@ Exit 0. 3 files, 107 tests passed (user repo contract, auth verifier, Firestore 
 - first sign-in sends the browser timezone once and the profile shows it
 - change my name to ሀሰን and see it in the header, also after reload
 - an unsaved edit never shows in the next member's form
+
+## gh pr create
+Exit 0. https://github.com/hmohammed/noor-quiz/pull/10
