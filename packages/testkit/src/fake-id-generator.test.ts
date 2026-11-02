@@ -15,9 +15,7 @@ describe('FakeIdGenerator', () => {
   });
 
   it('starts with the 2026-01-01 time prefix and a counter of 1', () => {
-    expect(new FakeIdGenerator().newId()).toBe(
-      FakeIdGenerator.TIME_PREFIX + '0000000000000001',
-    );
+    expect(new FakeIdGenerator().newId()).toBe(FakeIdGenerator.TIME_PREFIX + '0000000000000001');
   });
 
   it('produces the same sequence from two fresh instances', () => {

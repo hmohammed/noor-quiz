@@ -60,10 +60,7 @@ async function expectDomainError(p: Promise<unknown>, code: DomainErrorCode): Pr
  * Behaviour every UserRepo must have. Runs against InMemoryUserRepo in testkit and
  * against FirestoreUserRepo on the emulator. `makeImpl` must return an empty store.
  */
-export function runUserRepoContract(
-  name: string,
-  makeImpl: () => Promise<UserRepoHarness>,
-): void {
+export function runUserRepoContract(name: string, makeImpl: () => Promise<UserRepoHarness>): void {
   describe(`UserRepo contract: ${name}`, () => {
     async function setup() {
       const harness = await makeImpl();
