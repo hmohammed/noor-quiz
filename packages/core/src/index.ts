@@ -8,6 +8,7 @@ export * from './season/season-rules';
 export * from './season/hijri';
 export * from './users/user';
 export * from './usecases/get-or-create-user';
+export type * from './ports/auth-verifier';
 export type * from './ports/clock';
 export type * from './ports/id-generator';
 export type * from './ports/repos';
