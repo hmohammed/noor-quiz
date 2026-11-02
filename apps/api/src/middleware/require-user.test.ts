@@ -29,7 +29,9 @@ describe('requireUser', () => {
       name: 'Alice',
     });
 
-    const res = await app.request('/__test/user', { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request('/__test/user', {
+      headers: { authorization: `Bearer ${token}` },
+    });
 
     expect(res.status).toBe(200);
     const stored = await deps.users.getByIdentity({ provider: 'firebase', subject: 'uid-alice' });
