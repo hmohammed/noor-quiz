@@ -12,3 +12,7 @@
 - `npm test` — pass (39 files, 514 tests), including the T030 tests now on main.
 - `npm run test:emulator` — pass (3 files, 101 tests; Auth and Firestore).
 - `npm run test:e2e` — not run (no UI).
+
+## Push and pull request
+- `git push -u origin factory/T010b-verify-token-me` — new branch, no force.
+- Pull request: https://github.com/hmohammed/noor-quiz/pull/5
