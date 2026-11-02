@@ -21,6 +21,9 @@
   "profile.saved": "Profile saved.",
   "profile.loading": "Loading your profile…",
   "profile.signedOut": "Sign in to edit your profile.",
+  "profile.unavailable": "Sign-in is not available right now, so your profile can't be edited.",
+  "profile.retry": "Try again",
   "profile.error.displayName": "Use letters and spaces only, 2–32 characters.",
-  "profile.error.generic": "Could not save your profile. Please try again."
+  "profile.error.generic": "Could not save your profile. Please try again.",
+  "profile.error.load": "We couldn't load your profile. Please try again."
 }

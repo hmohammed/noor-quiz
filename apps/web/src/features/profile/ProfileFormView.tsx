@@ -15,6 +15,8 @@ export type ProfileFormStatus = 'idle' | 'saving' | 'saved' | 'invalid-name' | '
 export type ProfileViewState =
   | { kind: 'loading' }
   | { kind: 'signed-out' }
+  | { kind: 'unavailable' }
+  /** The profile could not be loaded (nothing was saved). */
   | { kind: 'error' }
   | { kind: 'form'; status: ProfileFormStatus; values: ProfileValues };
 
@@ -24,6 +26,10 @@ export interface ProfileFormViewProps {
   timeZones: readonly string[];
   onChange<K extends keyof ProfileValues>(field: K, value: ProfileValues[K]): void;
   onSubmit(): void;
+  /** Used by the `signed-out` state. */
+  onSignIn?(): void;
+  /** Used by the `error` state. */
+  onRetry?(): void;
 }
 
 const NAME_ID = 'profile-display-name';
@@ -32,7 +38,14 @@ const NAME_ERROR_ID = 'profile-display-name-error';
 const LOCALE_ID = 'profile-locale';
 const TIMEZONE_ID = 'profile-timezone';
 
-export function ProfileFormView({ state, timeZones, onChange, onSubmit }: ProfileFormViewProps) {
+export function ProfileFormView({
+  state,
+  timeZones,
+  onChange,
+  onSubmit,
+  onSignIn,
+  onRetry,
+}: ProfileFormViewProps) {
   const title = <h1 className="profile__title">{t('profile.title')}</h1>;
 
   switch (state.kind) {
@@ -50,6 +63,16 @@ export function ProfileFormView({ state, timeZones, onChange, onSubmit }: Profil
         <main className="page">
           {title}
           <p className="profile__status">{t('profile.signedOut')}</p>
+          <button type="button" className="auth__button" onClick={onSignIn}>
+            {t('auth.signIn')}
+          </button>
+        </main>
+      );
+    case 'unavailable':
+      return (
+        <main className="page">
+          {title}
+          <p className="profile__status">{t('profile.unavailable')}</p>
         </main>
       );
     case 'error':
@@ -57,8 +80,11 @@ export function ProfileFormView({ state, timeZones, onChange, onSubmit }: Profil
         <main className="page">
           {title}
           <p role="alert" className="profile__error">
-            {t('profile.error.generic')}
+            {t('profile.error.load')}
           </p>
+          <button type="button" className="auth__button" onClick={onRetry}>
+            {t('profile.retry')}
+          </button>
         </main>
       );
     case 'form':

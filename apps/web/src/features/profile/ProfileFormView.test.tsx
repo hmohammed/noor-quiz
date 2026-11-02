@@ -72,15 +72,30 @@ describe('ProfileFormView', () => {
     expect(html).not.toContain('<form');
   });
 
-  it('signed-out: prompt and no form', () => {
+  it('signed-out: prompt, its own sign-in button and no form', () => {
     const html = render({ kind: 'signed-out' });
     expect(html).toContain(en['profile.signedOut']);
+    expect(html).toMatch(new RegExp(`<button type="button"[^>]*>${en['auth.signIn']}</button>`));
     expect(html).not.toContain('<form');
   });
 
-  it('error without a profile: alert and no form', () => {
+  it('unavailable: says sign-in is unavailable, with no sign-in prompt or button', () => {
+    const html = render({ kind: 'unavailable' });
+    expect(html).toContain(escape(en['profile.unavailable']).replace(/'/g, '&#x27;'));
+    expect(html).not.toContain(en['profile.signedOut']);
+    expect(html).not.toContain('<button');
+    expect(html).not.toContain('<form');
+  });
+
+  it('load error: a load-failure alert (not the save message), a retry button and no form', () => {
     const html = render({ kind: 'error' });
-    expect(html).toMatch(new RegExp(`<p role="alert"[^>]*>${en['profile.error.generic']}</p>`));
+    expect(html).toMatch(
+      new RegExp(
+        `<p role="alert"[^>]*>${escape(en['profile.error.load']).replace(/'/g, '&#x27;')}</p>`,
+      ),
+    );
+    expect(html).not.toContain(en['profile.error.generic']);
+    expect(html).toMatch(new RegExp(`<button type="button"[^>]*>${en['profile.retry']}</button>`));
     expect(html).not.toContain('<form');
   });
 
@@ -131,6 +146,7 @@ describe('ProfileFormView', () => {
     const states: ProfileViewState[] = [
       { kind: 'loading' },
       { kind: 'signed-out' },
+      { kind: 'unavailable' },
       { kind: 'error' },
       ...(['idle', 'saving', 'saved', 'invalid-name', 'error'] as const).map((status) => ({
         kind: 'form' as const,

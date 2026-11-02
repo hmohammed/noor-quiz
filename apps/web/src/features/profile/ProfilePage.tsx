@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { UpdateMeRequest, type MeResponse, type UpdateMeRequestInput } from '@noor/contracts';
 import { ApiError } from '../../api/client';
-import { useSession } from '../auth/session-context';
+import { useSession, type Session } from '../auth/session-context';
 import {
   ProfileFormView,
   type ProfileFormStatus,
@@ -37,26 +37,60 @@ function changedFields(me: MeResponse, values: ProfileValues): UpdateMeRequestIn
   return patch;
 }
 
+const reloadPage = () => window.location.reload();
+
 /** Edit my display name, language and timezone. Saves through `PATCH /v1/me` only. */
 export function ProfilePage() {
   const session = useSession();
   const timeZones = useMemo(supportedTimeZones, []);
+  const { state } = session;
+
+  if (state.kind === 'signed-in') {
+    // Keyed by user, so one member's unsaved edits never show in another member's form.
+    return (
+      <ProfileEditor
+        key={state.me.userId}
+        me={state.me}
+        updateMe={session.updateMe}
+        timeZones={timeZones}
+      />
+    );
+  }
+
+  const viewState: ProfileViewState =
+    state.kind === 'loading'
+      ? { kind: 'loading' }
+      : state.kind === 'error'
+        ? { kind: 'error' }
+        : state.kind === 'unavailable'
+          ? { kind: 'unavailable' }
+          : { kind: 'signed-out' };
+
+  return (
+    <ProfileFormView
+      state={viewState}
+      timeZones={timeZones}
+      onChange={() => undefined}
+      onSubmit={() => undefined}
+      onSignIn={session.signIn}
+      onRetry={reloadPage}
+    />
+  );
+}
+
+function ProfileEditor({
+  me,
+  updateMe,
+  timeZones,
+}: {
+  me: MeResponse;
+  updateMe: Session['updateMe'];
+  timeZones: readonly string[];
+}) {
   // Edited fields only, so a later `me` (e.g. the browser timezone default) still shows.
   const [draft, setDraft] = useState<Partial<ProfileValues>>({});
   const [status, setStatus] = useState<ProfileFormStatus>('idle');
-
-  const { state } = session;
-  const me = state.kind === 'signed-in' ? state.me : null;
-  const values: ProfileValues | null = me ? { ...valuesOf(me), ...draft } : null;
-
-  const viewState: ProfileViewState =
-    values !== null
-      ? { kind: 'form', status, values }
-      : state.kind === 'loading'
-        ? { kind: 'loading' }
-        : state.kind === 'error'
-          ? { kind: 'error' }
-          : { kind: 'signed-out' };
+  const values: ProfileValues = { ...valuesOf(me), ...draft };
 
   const handleChange = <K extends keyof ProfileValues>(field: K, value: ProfileValues[K]) => {
     setDraft((d) => ({ ...d, [field]: value }));
@@ -64,7 +98,7 @@ export function ProfilePage() {
   };
 
   const handleSubmit = () => {
-    if (!me || !values || status === 'saving') return;
+    if (status === 'saving') return;
     const patch = changedFields(me, values);
     if (Object.keys(patch).length === 0) {
       setStatus('saved');
@@ -77,7 +111,7 @@ export function ProfilePage() {
       return;
     }
     setStatus('saving');
-    session.updateMe(patch).then(
+    updateMe(patch).then(
       () => {
         setDraft({});
         setStatus('saved');
@@ -91,7 +125,7 @@ export function ProfilePage() {
 
   return (
     <ProfileFormView
-      state={viewState}
+      state={{ kind: 'form', status, values }}
       timeZones={timeZones}
       onChange={handleChange}
       onSubmit={handleSubmit}

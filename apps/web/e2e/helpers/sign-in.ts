@@ -18,7 +18,8 @@ export async function signInWithEmulator(
     );
 
   const popupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: 'Sign in with Google' }).click();
+  // The header button; /profile shows a second one when signed out.
+  await page.getByRole('banner').getByRole('button', { name: 'Sign in with Google' }).click();
   const popup = await popupPromise;
 
   await popup.getByRole('button', { name: 'Add new account' }).click();

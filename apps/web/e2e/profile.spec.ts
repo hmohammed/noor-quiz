@@ -57,4 +57,25 @@ test.describe('profile', () => {
     await expect(page.getByTestId('auth-name')).toHaveText('ሀሰን');
     await expect(page.getByLabel('Display name')).toHaveValue('ሀሰን');
   });
+
+  test("an unsaved edit never shows in the next member's form", async ({ page }) => {
+    await page.goto('/');
+    await signInWithEmulator(page, {
+      displayName: 'First E2E',
+      email: `e2e-first-${Date.now()}@example.com`,
+    });
+    await page.getByRole('link', { name: 'Profile' }).click();
+    await page.getByLabel('Display name').fill('Unsaved Draft');
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await expect(page.getByText('Sign in to edit your profile.')).toBeVisible();
+
+    await signInWithEmulator(page, {
+      displayName: 'Second E2E',
+      email: `e2e-second-${Date.now()}@example.com`,
+    });
+    await expect(page.getByTestId('auth-name')).toHaveText('Second E2E');
+    await expect(page.getByLabel('Display name')).toHaveValue('Second E2E');
+    await expect(page.getByText('Profile saved.')).toHaveCount(0);
+  });
 });
