@@ -132,22 +132,34 @@ jobs:
             echo "FIREBASE_PROJECT_ID must be noor-quiz-bec90 for deploy-dev" >&2
             exit 1
           fi
-      # Workload Identity Federation: no key and no secrets; it exports ADC for firebase-tools.
-      # The credentials file lands in the workspace root, outside apps/api/build and apps/web/dist.
-      - uses: google-github-actions/auth@v2
+      # Workload Identity Federation: no long-lived key.
+      # firebase-tools does not accept the external_account credentials file and
+      # fails with "have you run firebase login?". Mint a one-hour access token
+      # and pass it as FIREBASE_TOKEN. The credentials file stays (default) for
+      # any Google client the CLI shells out to, and it lands in the workspace
+      # root, outside apps/api/build and apps/web/dist.
+      - id: auth
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
       - run: npm run build
       - name: Write the non-secret runtime env
         run: printf 'NOOR_ENV=dev\n' > "apps/api/build/.env.${FIREBASE_PROJECT_ID}"
       - name: Deploy Firestore rules and indexes
+        env:
+          FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only firestore:rules,firestore:indexes
       # --force lets the CLI set the Artifact Registry cleanup policy non-interactively and
       # delete functions that were removed from codebase `api`.
       - name: Deploy functions
+        env:
+          FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only functions --force
       - name: Deploy hosting
+        env:
+          FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: npx firebase deploy --config firebase/firebase.json --project "$FIREBASE_PROJECT_ID" --non-interactive --only hosting
       - name: Smoke check /v1/health
         run: curl -fsS --retry 10 --retry-delay 6 --retry-all-errors https://noor-quiz-bec90.web.app/v1/health | jq -e '.status == "ok"'
