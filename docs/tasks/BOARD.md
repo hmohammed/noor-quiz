@@ -29,7 +29,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T010a](E01-identity-privacy.md#t010a) | Own user and identity records: getOrCreateUser with a transaction | E01 | T002, T003 | sec | done | factory |
 | [T010b](E01-identity-privacy.md#t010b) | Verify the token and return GET /v1/me | E01 | T010a | sec | done | factory |
 | [T010c](E01-identity-privacy.md#t010c) | Web: sign in with Google and see my name | E01 | T010b | sec | done | factory |
-| [T011](E01-identity-privacy.md#t011) | Edit my profile: display name, locale, timezone | E01 | T010 |  | todo |  |
+| [T011](E01-identity-privacy.md#t011) | Edit my profile: display name, locale, timezone | E01 | T010 |  | done | factory |
 | [T012](E01-identity-privacy.md#t012) | Firestore rules baseline: deny every client write | E01 | T002 | sec | done | factory |
 | [T013](E01-identity-privacy.md#t013) | Consent at first sign-in and delete my account | E01 | T011 | sec | todo |  |
 | [T020](E02-communities.md#t020) | Create a community and list mine | E02 | T013 | sec | todo |  |
