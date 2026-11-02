@@ -1,4 +1,6 @@
 import type { Clock } from './ports/clock';
+import type { IdGenerator } from './ports/id-generator';
+import type { UserRepo } from './ports/repos';
 
 /**
  * Ports available to use cases. Routes get real adapters from
@@ -7,4 +9,6 @@ import type { Clock } from './ports/clock';
  */
 export interface Deps {
   clock: Clock;
+  ids: IdGenerator;
+  users: UserRepo;
 }
