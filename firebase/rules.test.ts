@@ -28,24 +28,30 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 const rules = readFileSync(fileURLToPath(new URL('./firestore.rules', import.meta.url)), 'utf8');
 
 const ALICE = 'uid-alice';
+const ALICE_USER_ID = '01JAAAAAAAAAAAAAAAAAAAAAAA';
+const AT = '2026-01-01T00:00:00.000Z';
 
-// Fixtures only: these do not define the real users / identities schema.
 const seeds = {
   users: {
-    id: ALICE,
+    id: ALICE_USER_ID,
     data: {
-      id: ALICE,
+      id: ALICE_USER_ID,
       displayName: 'Alice',
-      createdAt: '2026-01-01T00:00:00.000Z',
+      createdAt: AT,
+      updatedAt: AT,
       schemaVersion: 1,
     },
   },
   identities: {
-    id: ALICE,
+    id: `firebase_${ALICE}`,
     data: {
+      id: `firebase_${ALICE}`,
       provider: 'firebase',
-      uid: ALICE,
-      userId: '01JAAAAAAAAAAAAAAAAAAAAAAA',
+      subject: ALICE,
+      userId: ALICE_USER_ID,
+      email: 'alice@example.com',
+      emailVerified: true,
+      createdAt: AT,
       schemaVersion: 1,
     },
   },
@@ -131,7 +137,7 @@ describe.each(clients)('%s client', (_label, context) => {
   it('cannot commit a batched write', async () => {
     const firestore = db(context());
     const batch = writeBatch(firestore);
-    batch.set(doc(firestore, 'users', ALICE), { displayName: 'Mallory' });
+    batch.set(doc(firestore, 'users', ALICE_USER_ID), { displayName: 'Mallory' });
     batch.set(doc(firestore, 'anything', 'y'), { v: 2 });
     await assertFails(batch.commit());
   });
@@ -149,9 +155,9 @@ describe.each(clients)('%s client', (_label, context) => {
 describe('writes really were denied', () => {
   it('seeded docs are unchanged and no new docs exist after a denied write attempt', async () => {
     const alice = db(testEnv.authenticatedContext(ALICE));
-    await assertFails(setDoc(doc(alice, 'users', ALICE), { displayName: 'Mallory' }));
+    await assertFails(setDoc(doc(alice, 'users', ALICE_USER_ID), { displayName: 'Mallory' }));
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      const snap = await getDoc(doc(db(ctx), 'users', ALICE));
+      const snap = await getDoc(doc(db(ctx), 'users', ALICE_USER_ID));
       expect(snap.data()).toEqual(seeds.users.data);
       // assertSucceeds here only checks the admin path works; it is not a client read.
       const all = await assertSucceeds(getDocs(collection(db(ctx), 'anything')));
