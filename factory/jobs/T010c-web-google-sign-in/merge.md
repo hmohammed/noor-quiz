@@ -11,3 +11,7 @@
 - `npm test` — pass (43 files, 542 tests).
 - `npm run test:e2e` — pass (2 tests). The emulators and Vite were started in PowerShell first, because `dev:emulators` uses shell syntax that cmd.exe cannot run. Playwright reused those servers.
 - `npm run test:emulator` — not run (no adapter or rules change).
+
+## Push and pull request
+- `git push -u origin factory/T010c-web-google-sign-in` — new branch, no force.
+- Pull request: https://github.com/hmohammed/noor-quiz/pull/9
