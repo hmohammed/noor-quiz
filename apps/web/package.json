@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/ensure-env-local.mjs && vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@noor/contracts": "*",
+    "firebase": "^12.19.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^7.18.4"
