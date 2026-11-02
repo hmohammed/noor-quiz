@@ -6,4 +6,7 @@ export const PACKAGE_NAME = '@noor/testkit' as const;
 export const CORE_PACKAGE = CORE_PACKAGE_NAME;
 
 export * from './fake-clock';
+export * from './fake-id-generator';
+export * from './in-memory-user-repo';
 export * from './make-test-deps';
+export * from './contracts/user-repo.contract';
