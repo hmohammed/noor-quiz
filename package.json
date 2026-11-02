@@ -21,7 +21,8 @@
     "dev:api": "npm run build:watch -w @noor/api",
     "dev:web": "npm run dev -w @noor/web",
     "build": "npm run build -w @noor/api && npm run build -w @noor/web",
-    "test:e2e": "npm run test:e2e -w @noor/web"
+    "test:e2e": "npm run test:e2e -w @noor/web",
+    "factory:sync": "node factory/sync.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
