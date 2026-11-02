@@ -25,6 +25,11 @@ describe('@noor/core', () => {
     'identityId',
     'normaliseDisplayName',
     'getOrCreateUser',
+    'normaliseProfileName',
+    'canonicalTimeZone',
+    'isProfileTimeZone',
+    'isSupportedLocale',
+    'updateProfile',
   ])('exports %s', (name) => {
     expect(typeof (core as Record<string, unknown>)[name]).toBe('function');
   });

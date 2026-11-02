@@ -38,6 +38,9 @@ function mapRepo() {
       return user;
     }),
     getById: vi.fn(async (id: string) => users.get(id) ?? null),
+    updateProfile: vi.fn(async () => {
+      throw new Error('not used here');
+    }),
   } satisfies UserRepo;
   return { repo, users, identities };
 }
@@ -62,9 +65,11 @@ describe('getOrCreateUser', () => {
     );
 
     const iso = toIso(NOW);
-    expect(user).toEqual({
+    expect(user).toStrictEqual({
       id: ULID_A,
       displayName: 'Alice',
+      locale: null,
+      timezone: null,
       createdAt: iso,
       updatedAt: iso,
       schemaVersion: 1,
@@ -106,6 +111,8 @@ describe('getOrCreateUser', () => {
     const winner: User = {
       id: ULID_B as User['id'],
       displayName: 'Winner',
+      locale: null,
+      timezone: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       schemaVersion: 1,

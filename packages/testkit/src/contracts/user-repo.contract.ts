@@ -31,7 +31,15 @@ function verified(subject: string, name: string | null = 'Alice'): VerifiedIdent
 }
 
 function userDoc(id: UserId): User {
-  return { id, displayName: 'Someone', createdAt: AT, updatedAt: AT, schemaVersion: 1 };
+  return {
+    id,
+    displayName: 'Someone',
+    locale: null,
+    timezone: null,
+    createdAt: AT,
+    updatedAt: AT,
+    schemaVersion: 1,
+  };
 }
 
 function identityDoc(subject: string, userId: UserId, id = `firebase_${subject}`): Identity {
@@ -169,6 +177,71 @@ export function runUserRepoContract(name: string, makeImpl: () => Promise<UserRe
         'VALIDATION',
       );
       expect(await counts()).toEqual({ users: 0, identities: 0 });
+    });
+
+    describe('updateProfile', () => {
+      const LATER = '2026-01-05T06:07:08.000Z';
+
+      async function seeded() {
+        const harness = await setup();
+        await harness.repo.createWithIdentity(userDoc(ULID_A), identityDoc('uid-alice', ULID_A));
+        await harness.repo.createWithIdentity(userDoc(ULID_B), identityDoc('uid-bob', ULID_B));
+        return harness;
+      }
+
+      it('updates only the patched fields plus updatedAt and returns the stored user', async () => {
+        const { repo, counts } = await seeded();
+
+        const result = await repo.updateProfile(ULID_A, { displayName: 'ሀሰን' }, LATER);
+
+        const expected: User = { ...userDoc(ULID_A), displayName: 'ሀሰን', updatedAt: LATER };
+        expect(result).toEqual(expected);
+        expect(await repo.getById(ULID_A)).toEqual(expected);
+        expect(await repo.getById(ULID_B)).toEqual(userDoc(ULID_B));
+        expect(await counts()).toEqual({ users: 2, identities: 2 });
+      });
+
+      it('applies locale and timezone and keeps the earlier name', async () => {
+        const { repo } = await seeded();
+        await repo.updateProfile(ULID_A, { displayName: 'Åsa' }, AT);
+
+        const result = await repo.updateProfile(
+          ULID_A,
+          { locale: 'sv', timezone: 'Europe/Stockholm' },
+          LATER,
+        );
+
+        expect(result).toEqual({
+          ...userDoc(ULID_A),
+          displayName: 'Åsa',
+          locale: 'sv',
+          timezone: 'Europe/Stockholm',
+          updatedAt: LATER,
+        });
+        expect(await repo.getById(ULID_A)).toEqual(result);
+      });
+
+      it('returns a copy, not the stored object', async () => {
+        const { repo } = await seeded();
+        const result = await repo.updateProfile(ULID_A, { locale: 'ar' }, LATER);
+        result.locale = 'en';
+        expect((await repo.getById(ULID_A))?.locale).toBe('ar');
+      });
+
+      it('throws NOT_FOUND for an unknown ULID and writes nothing', async () => {
+        const { repo, counts } = await setup();
+        await expectDomainError(repo.updateProfile(ULID_A, { locale: 'en' }, LATER), 'NOT_FOUND');
+        expect(await counts()).toEqual({ users: 0, identities: 0 });
+        expect(await repo.getById(ULID_A)).toBeNull();
+      });
+
+      it('throws VALIDATION for a non-ULID id', async () => {
+        const { repo } = await setup();
+        await expectDomainError(
+          repo.updateProfile('uid-alice' as UserId, { locale: 'en' }, LATER),
+          'VALIDATION',
+        );
+      });
     });
   });
 }

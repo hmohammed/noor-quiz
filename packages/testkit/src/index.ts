@@ -10,5 +10,6 @@ export * from './fake-clock';
 export * from './fake-id-generator';
 export * from './in-memory-user-repo';
 export * from './make-test-deps';
+export * from './profile-cases';
 export * from './contracts/auth-verifier.contract';
 export * from './contracts/user-repo.contract';
