@@ -53,6 +53,9 @@ function mapRepo() {
       users.set(id, next);
       return next;
     }),
+    deleteUserAndIdentities: vi.fn(async () => {
+      throw new Error('not used here');
+    }),
   } satisfies UserRepo;
   return { repo, users, identities };
 }

@@ -33,6 +33,7 @@ describe('@noor/core', () => {
     'hasCurrentConsent',
     'isValidConsent',
     'acceptConsent',
+    'deleteAccount',
   ])('exports %s', (name) => {
     expect(typeof (core as Record<string, unknown>)[name]).toBe('function');
   });

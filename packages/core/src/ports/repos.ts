@@ -15,6 +15,10 @@ import type { Identity, IdentityKey, User, UserId } from '../users/user';
  *   emailVerified, createdAt, schemaVersion: 1 }`. The deterministic id is what makes
  *   one identity map to exactly one user.
  *
+ * Indexes: the only query, `identities where userId ==` in `deleteUserAndIdentities`,
+ * is a single-field equality served by Firestore's automatic index, so no composite
+ * index is needed.
+ *
  * Every implementation validates the key with `identityId()` before building a doc
  * path, so a bad subject is rejected with `UNAUTHENTICATED` even if a caller skips
  * the use case.
@@ -39,4 +43,10 @@ export interface UserRepo {
    * an unknown user, VALIDATION for a non-ULID id or a consent that fails `isValidConsent`.
    */
   recordConsent(userId: UserId, consent: Consent, updatedAt: string): Promise<User>;
+  /**
+   * Atomic. Deletes `users/{userId}` and every `identities` doc whose `userId` equals it,
+   * including orphan and unreadable docs. Unknown user: resolves, writes nothing.
+   * Non-ULID id: throws VALIDATION.
+   */
+  deleteUserAndIdentities(userId: UserId): Promise<void>;
 }

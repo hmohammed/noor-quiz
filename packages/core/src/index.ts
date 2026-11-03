@@ -12,6 +12,7 @@ export * from './users/consent';
 export * from './usecases/get-or-create-user';
 export * from './usecases/update-profile';
 export * from './usecases/accept-consent';
+export * from './usecases/delete-account';
 export type * from './ports/auth-verifier';
 export type * from './ports/clock';
 export type * from './ports/id-generator';
