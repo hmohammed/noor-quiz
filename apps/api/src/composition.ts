@@ -6,6 +6,7 @@ import {
   FirestoreCommunityRepo,
   FirestoreMembershipRepo,
 } from './adapters/firebase/community-repo';
+import { FirestoreInviteRepo } from './adapters/firebase/invite-repo';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
 import { UlidIdGenerator } from './adapters/system/ulid-id-generator';
@@ -36,6 +37,7 @@ export function createComposition(
     users: new FirestoreUserRepo(db),
     communities: new FirestoreCommunityRepo(db),
     memberships: new FirestoreMembershipRepo(db),
+    invites: new FirestoreInviteRepo(db),
   };
   return { config, deps, version: opts.version };
 }
