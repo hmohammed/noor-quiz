@@ -1,18 +1,25 @@
 import {
+  asInviteToken,
   asTenantId,
   asUserId,
   chooseSlug,
   COMMUNITY_SCHEMA_VERSION,
   COMMUNITY_SLUG_SCHEMA_VERSION,
   DomainError,
+  instantFromIso,
+  inviteUnusable,
   isRole,
+  MEMBERSHIP_SCHEMA_VERSION,
   membershipId,
   slugCandidates,
   validateCreateWithOwner,
+  validateNewInvite,
   type Community,
   type CommunityRepo,
   type CommunitySlug,
   type CreateWithOwnerInput,
+  type Invite,
+  type InviteRepo,
   type Membership,
   type MembershipRepo,
   type TenantId,
@@ -29,13 +36,16 @@ const DELETE_BATCH = 400;
 export function createInMemoryCommunityStore(): {
   communities: InMemoryCommunityRepo;
   memberships: InMemoryMembershipRepo;
+  invites: InMemoryInviteRepo;
 } {
   const communities = new Map<string, Community>();
   const memberships = new Map<string, Membership>();
   const slugs = new Map<string, CommunitySlug>();
+  const invites = new Map<string, Invite>();
   return {
     communities: new InMemoryCommunityRepo(communities, memberships, slugs),
     memberships: new InMemoryMembershipRepo(memberships),
+    invites: new InMemoryInviteRepo(invites, memberships),
   };
 }
 
@@ -197,5 +207,102 @@ export class InMemoryMembershipRepo implements MembershipRepo {
       updatedAt: membership.updatedAt,
       schemaVersion: membership.schemaVersion,
     });
+  }
+}
+
+function copyInvite(invite: Invite): Invite {
+  return {
+    id: invite.id,
+    tenantId: invite.tenantId,
+    createdBy: invite.createdBy,
+    expiresAt: invite.expiresAt,
+    maxUses: invite.maxUses,
+    uses: invite.uses,
+    createdAt: invite.createdAt,
+    updatedAt: invite.updatedAt,
+    schemaVersion: invite.schemaVersion,
+  };
+}
+
+function copyMembership(membership: Membership): Membership {
+  return {
+    id: membership.id,
+    tenantId: membership.tenantId,
+    userId: membership.userId,
+    role: membership.role,
+    createdAt: membership.createdAt,
+    updatedAt: membership.updatedAt,
+    schemaVersion: membership.schemaVersion,
+  };
+}
+
+/**
+ * In-memory `invites`. Shares the membership map with `InMemoryMembershipRepo`.
+ * `accept` does not await between the read and the write, so two callers cannot
+ * interleave, matching `createWithOwner`. Does not read the communities map.
+ */
+export class InMemoryInviteRepo implements InviteRepo {
+  readonly #invites: Map<string, Invite>;
+  readonly #memberships: Map<string, Membership>;
+
+  constructor(invites: Map<string, Invite>, memberships: Map<string, Membership>) {
+    this.#invites = invites;
+    this.#memberships = memberships;
+  }
+
+  async create(tenantId: TenantId, invite: Invite): Promise<Invite> {
+    validateNewInvite(tenantId, invite);
+    if (this.#invites.has(invite.id)) {
+      throw new DomainError('CONFLICT', { reason: 'invite-exists' });
+    }
+    const stored = copyInvite(invite);
+    this.#invites.set(stored.id, stored);
+    return copyInvite(stored);
+  }
+
+  async getByToken(token: string): Promise<Invite | null> {
+    const id = asInviteToken(token);
+    const invite = this.#invites.get(id);
+    return invite ? copyInvite(invite) : null;
+  }
+
+  async accept(input: { token: string; userId: string; now: string }): Promise<{
+    membership: Membership;
+    created: boolean;
+  }> {
+    // No await: the read and the write stay in one turn.
+    const token = asInviteToken(input.token);
+    const userId = asUserId(input.userId);
+    const now = instantFromIso(input.now);
+    const invite = this.#invites.get(token);
+    if (!invite) throw new DomainError('NOT_FOUND', { reason: 'invite-missing' });
+    const existingId = membershipId(userId, invite.tenantId);
+    const existing = this.#memberships.get(existingId);
+    if (existing && existing.userId === userId && existing.tenantId === invite.tenantId) {
+      return { membership: copyMembership(existing), created: false };
+    }
+    if (inviteUnusable(invite, now)) {
+      throw new DomainError('GONE', { reason: 'invite-unusable' });
+    }
+    const membership: Membership = {
+      id: existingId,
+      tenantId: invite.tenantId,
+      userId,
+      role: 'member',
+      createdAt: input.now,
+      updatedAt: input.now,
+      schemaVersion: MEMBERSHIP_SCHEMA_VERSION,
+    };
+    const updated = copyInvite(invite);
+    updated.uses += 1;
+    updated.updatedAt = input.now;
+    this.#memberships.set(membership.id, membership);
+    this.#invites.set(token, updated);
+    return { membership: copyMembership(membership), created: true };
+  }
+
+  /** Test-only. Not part of `InviteRepo`. */
+  count(): number {
+    return this.#invites.size;
   }
 }

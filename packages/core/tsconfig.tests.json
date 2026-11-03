@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist/invite-tests",
+    "tsBuildInfoFile": "dist/invite-tests/tsconfig.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/usecases/accept-invite.test.ts"],
+  "references": [{ "path": "./tsconfig.json" }, { "path": "../testkit" }]
+}

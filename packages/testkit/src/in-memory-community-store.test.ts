@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { asTenantId, asUserId, membershipId } from '@noor/core';
 import { runCommunityStoreContract } from './contracts/community-store.contract';
+import { runInviteRepoContract } from './contracts/invite-repo.contract';
 import { createInMemoryCommunityStore } from './in-memory-community-store';
 
 runCommunityStoreContract('InMemoryCommunityStore', async () => {
@@ -11,6 +12,16 @@ runCommunityStoreContract('InMemoryCommunityStore', async () => {
     counts: async () => store.communities.counts(),
     readSlug: async (slug) => store.communities.storedSlug(slug),
     seedMembership: (membership) => store.memberships.seed(membership),
+  };
+});
+
+runInviteRepoContract('InMemoryInviteRepo', async () => {
+  const store = createInMemoryCommunityStore();
+  return {
+    invites: store.invites,
+    memberships: store.memberships,
+    seedMembership: (membership) => store.memberships.seed(membership),
+    countInvites: async () => store.invites.count(),
   };
 });
 

@@ -4,6 +4,7 @@ import type {
   Membership,
   TenantId,
 } from '../communities/community';
+import type { Invite } from '../communities/invite';
 import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
@@ -96,8 +97,9 @@ export interface CommunityRepo {
  * `userId`, never a client id. Both are single-field `userId` equality queries, served
  * by Firestore's automatic index, so no composite index is needed.
  *
- * There is no `setRole` and no public create. The only membership write is the owner
- * row inside `CommunityRepo.createWithOwner`, plus `deleteByUser`.
+ * There is no `setRole` and no public create. Membership writes are the owner row in
+ * `CommunityRepo.createWithOwner`, the member row inside `InviteRepo.accept`, and
+ * `deleteByUser`.
  */
 export interface MembershipRepo {
   /** The membership for this tenant and user, or null. Does not reveal other tenants. */
@@ -114,4 +116,36 @@ export interface MembershipRepo {
    * memberships is a success. Idempotent.
    */
   deleteByUser(userId: UserId): Promise<void>;
+}
+
+/**
+ * `invites/{token}` (`token` is a ULID, `id === token`): `{ id, tenantId, createdBy,
+ * expiresAt, maxUses, uses, createdAt, updatedAt, schemaVersion: 1 }`. No composite
+ * index: token and membership reads are document gets.
+ *
+ * `create` takes `tenantId` first and it must equal `invite.tenantId`. A mismatch, a
+ * bad ULID, `uses !== 0`, or a `maxUses` outside 1–100 is `VALIDATION` and writes
+ * nothing. An existing token is `CONFLICT` and does not change the stored invite.
+ *
+ * `getByToken` omits `tenantId` because the caller does not know the tenant yet. The
+ * token is the unguessable document id (the same exception class as `listByUser`).
+ * Returns null when missing. Does not check expiry. A non-ULID throws `VALIDATION`
+ * before the read.
+ *
+ * `accept` is one transaction. `now` is the UTC ISO string the use case got from
+ * `Clock`. Implementations must not read a clock. Inside the transaction:
+ * 1. Missing invite → `NOT_FOUND`, no write.
+ * 2. Existing membership for `(invite.tenantId, userId)` → return it with
+ *    `created: false` and no write, before the expiry and `maxUses` checks.
+ * 3. `inviteUnusable(invite, instantFromIso(now))` → `GONE`, no write.
+ * 4. Otherwise write a `member` membership and set `uses` to the value read in this
+ *    transaction plus 1, and `updatedAt` to `now`. Return `created: true`.
+ */
+export interface InviteRepo {
+  create(tenantId: TenantId, invite: Invite): Promise<Invite>;
+  getByToken(token: string): Promise<Invite | null>;
+  accept(input: { token: string; userId: string; now: string }): Promise<{
+    membership: Membership;
+    created: boolean;
+  }>;
 }
