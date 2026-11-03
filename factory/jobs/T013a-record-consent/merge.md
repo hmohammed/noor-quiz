@@ -29,3 +29,6 @@ Exit 0. 3 files, 118 tests passed.
 
 ## npm run test:e2e
 `dev:emulators` uses POSIX env syntax that cmd.exe cannot run. Started the same servers by hand and Playwright reused them. Exit 0. 5 passed.
+
+## gh pr create
+Exit 0. https://github.com/hmohammed/noor-quiz/pull/12
