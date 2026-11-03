@@ -32,3 +32,9 @@ Exit 0. 3 files, 127 tests passed.
 
 ## npm run test:e2e
 `dev:emulators` uses POSIX env syntax that cmd.exe cannot run. Started the emulators (`FUNCTIONS_DISCOVERY_TIMEOUT=60`) and `npm run dev:web` by hand from this worktree after `npm run build -w @noor/api`, then Playwright reused them. Exit 0. 10 passed.
+
+## git push -u origin HEAD
+Exit 0. New branch `factory/T013c-delete-account`.
+
+## gh pr create
+Exit 0. https://github.com/hmohammed/noor-quiz/pull/14
