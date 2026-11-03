@@ -33,6 +33,7 @@
   button { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding-block: 3px; padding-inline: 10px; cursor: pointer; }
   .banner { padding-block: 8px; padding-inline: 20px; background: var(--changes-bg); color: var(--changes); font-weight: 600; }
   .layout { display: grid; grid-template-columns: 1fr 280px; gap: var(--gap); padding: 16px 20px; align-items: start; }
+  .layout[hidden], #depsView[hidden] { display: none; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
   .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: var(--gap); overflow-x: auto; padding-block-end: 8px; }
   .col { background: color-mix(in srgb, var(--panel) 55%, transparent); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; min-block-size: 60vh; }
@@ -77,20 +78,72 @@
   .doc table { border-collapse: collapse; } .doc td, .doc th { border: 1px solid var(--line); padding: 3px 8px; text-align: start; }
   .verdict { display: inline-block; font-weight: 700; padding: 4px 12px; border-radius: 6px; margin-block-end: 8px; }
   .verdict.ok { background: var(--pass-bg); color: var(--pass); } .verdict.bad { background: var(--changes-bg); color: var(--changes); }
+  .views { display: flex; gap: 6px; }
+  .views a { color: inherit; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding-block: 3px; padding-inline: 10px; font-size: 12px; }
+  .views a[aria-current="page"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  #depsView { padding: 16px 20px 32px; }
+  .deps-bar { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-block-end: 12px; }
+  .phases { display: flex; flex-wrap: wrap; gap: 6px; margin-block-end: 8px; }
+  .phases button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  #depSummary { margin: 0; line-height: 1.45; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }
+  .legend span { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+  .swatch { display: inline-block; inline-size: 10px; block-size: 10px; border-radius: 2px; border: 2px solid var(--muted); }
+  .swatch.ready { border-color: var(--accent); } .swatch.running { background: var(--accent); border-color: var(--accent); }
+  .swatch.human { border-color: var(--human); } .swatch.gate { border-color: var(--changes); }
+  .swatch.done { border-color: var(--pass); opacity: .7; }
+  .deps-scroll { overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); max-block-size: calc(100vh - 220px); }
+  .graph { position: relative; direction: ltr; }
+  .graph svg { position: absolute; inset: 0; overflow: visible; }
+  .graph .node { position: absolute; inline-size: 176px; block-size: 64px; margin: 0; text-align: start; overflow: hidden;
+    border-inline-start-width: 4px; }
+  .graph .node b { display: block; font-size: 12px; }
+  .graph .node .nt { display: block; font-size: 12px; font-weight: 500; line-height: 1.25; max-block-size: 2.5em; overflow: hidden; }
+  .graph .node small { display: block; color: var(--muted); font-size: 11px; margin-block-start: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .graph .node.kind-ready { border-inline-start-color: var(--accent); }
+  .graph .node.kind-running { border-inline-start-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+  .graph .node.kind-human { border-inline-start-color: var(--human); }
+  .graph .node.kind-gate { border-inline-start-color: var(--changes); background: var(--changes-bg); }
+  .graph .node.kind-deps { border-inline-start-color: var(--muted); }
+  .graph .node.kind-split { border-inline-start-color: var(--pass); }
+  .graph .node.kind-done { border-inline-start-color: var(--pass); opacity: .72; }
+  .graph.focusing .node { opacity: .28; }
+  .graph.focusing .node.hot { opacity: 1; }
+  .graph.focusing svg path { opacity: .12; }
+  .graph.focusing svg path.hot { opacity: 1; }
 </style>
 </head>
 <body>
 <header>
   <h1><span>◆</span> Noor Quiz factory</h1>
+  <nav class="views" aria-label="Dashboard views">
+    <a id="viewBoard" href="#board">Board</a>
+    <a id="viewDeps" href="#deps">Dependencies</a>
+  </nav>
   <span id="gates"></span>
   <span class="pill" id="parallel"></span>
   <span class="pill" id="updated"></span>
   <button id="dir" title="Toggle right-to-left">⇄ RTL</button>
 </header>
 <div id="banner"></div>
-<div class="layout">
+<div class="layout" id="layout">
   <main class="board" id="board"></main>
   <aside id="side"></aside>
+</div>
+<div id="depsView" hidden>
+  <div class="deps-bar">
+    <div class="phases" id="depPhases" role="group" aria-label="Which tasks to draw"></div>
+    <p id="depSummary"></p>
+    <p class="legend">
+      <span><i class="swatch ready"></i> can start</span>
+      <span><i class="swatch running"></i> in the factory</span>
+      <span><i class="swatch"></i> waiting on a task</span>
+      <span><i class="swatch gate"></i> waiting on a phase gate</span>
+      <span><i class="swatch human"></i> needs a person</span>
+      <span><i class="swatch done"></i> done, and unblocks the next task</span>
+    </p>
+  </div>
+  <div class="deps-scroll" id="depScroll"></div>
 </div>
 <dialog id="dlg"><div class="dlg">
   <header><h1 id="dlgTitle"></h1><button id="dlgClose">Close</button></header>
@@ -162,6 +215,176 @@ function card(j) {
 }
 
 let state = { board: null, tasks: [] };
+let depPhase = null;
+let depFocus = null;
+let depSig = '';
+
+function depsOpen() { return location.hash === '#deps'; }
+function jobFor(id, board) {
+  return (board.jobs || []).find(j => j.id === id && j.stage !== 'done' && j.stage !== 'split') || null;
+}
+function why(t, byId, board) {
+  if (!t || t.status === 'done') return { kind: 'done', label: 'done' };
+  if (t.status === 'split') return { kind: 'split', label: 'split' };
+  const job = jobFor(t.id, board);
+  if (job && (ACTIVE.has(job.stage) || job.stage === 'pr-open')) return { kind: 'running', label: job.stage === 'pr-open' ? 'PR open' : job.stage };
+  if (job && job.stage === 'needs-human') return { kind: 'human', label: 'needs a human' };
+  if (t.owner === 'human') return { kind: 'human', label: 'human' };
+  const open = t.deps.filter(d => byId[d] && byId[d].status !== 'done');
+  if (open.length) return { kind: 'deps', label: 'waits for ' + open.join(', ') };
+  if (!gatesOk(t.phase, board.gates || {})) {
+    const prev = PHASES[PHASES.indexOf(t.phase) - 1];
+    return { kind: 'gate', label: prev ? 'gate ' + prev : 'gate' };
+  }
+  return { kind: 'ready', label: 'ready' };
+}
+function currentPhase(tasks) {
+  return PHASES.find(p => tasks.some(t => t.phase === p && t.status !== 'done')) || 'P1';
+}
+function graphModel(tasks, board, phase) {
+  const byId = Object.fromEntries(tasks.map(t => [t.id, t]));
+  const open = tasks.filter(t => t.status !== 'done');
+  const shown = phase === 'all' ? open : open.filter(t => t.phase === phase);
+  const ids = new Set(shown.map(t => t.id));
+  for (const t of shown) for (const d of t.deps) if (byId[d]) ids.add(d);
+  const gateEdges = [];
+  for (const t of shown) {
+    if (why(t, byId, board).kind !== 'gate') continue;
+    const prev = PHASES[PHASES.indexOf(t.phase) - 1];
+    if (!prev) continue;
+    ids.add('gate:' + prev);
+    gateEdges.push(['gate:' + prev, t.id]);
+  }
+  const nodes = [...ids].map(id => {
+    if (id.startsWith('gate:')) {
+      const p = id.slice(5);
+      const closed = (board.gates || {})[p] !== 'open';
+      return { id, title: 'Phase gate ' + p, epic: '', phase: p, deps: [], kind: 'gate', label: closed ? 'closed' : 'open' };
+    }
+    const t = byId[id];
+    const w = why(t, byId, board);
+    return { ...t, kind: w.kind, label: w.label };
+  });
+  const idset = new Set(nodes.map(n => n.id));
+  const edges = [];
+  for (const n of nodes) {
+    if (n.id.startsWith('gate:')) continue;
+    for (const d of n.deps) if (idset.has(d)) edges.push([d, n.id, byId[d]?.status === 'done']);
+  }
+  for (const [from, to] of gateEdges) edges.push([from, to, false]);
+  return { nodes, edges, byId };
+}
+function layoutGraph(nodes, edges) {
+  const layer = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  for (let i = 0; i < nodes.length; i++) for (const [from, to] of edges) {
+    if (layer[from] != null && layer[to] != null) layer[to] = Math.max(layer[to], layer[from] + 1);
+  }
+  const cols = new Map();
+  for (const n of nodes) {
+    const list = cols.get(layer[n.id]) || [];
+    list.push(n);
+    cols.set(layer[n.id], list);
+  }
+  const order = [...cols.keys()].sort((a, b) => a - b);
+  for (const list of cols.values()) list.sort((a, b) => PHASES.indexOf(a.phase) - PHASES.indexOf(b.phase) || a.epic.localeCompare(b.epic) || a.id.localeCompare(b.id, undefined, { numeric: true }));
+  const NW = 176, NH = 64, GX = 72, GY = 12, PAD = 20;
+  const pos = {};
+  order.forEach((L, col) => cols.get(L).forEach((n, row) => { pos[n.id] = { x: PAD + col * (NW + GX), y: PAD + row * (NH + GY) }; }));
+  const rows = Math.max(1, ...[...cols.values()].map(l => l.length));
+  return { pos, NW, NH, width: PAD * 2 + order.length * NW + Math.max(0, order.length - 1) * GX, height: PAD * 2 + rows * NH + Math.max(0, rows - 1) * GY };
+}
+function related(id, edges) {
+  const hot = new Set([id]);
+  const walk = (forward) => {
+    const seen = new Set([id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const [from, to] of edges) {
+        const src = forward ? from : to;
+        const dst = forward ? to : from;
+        if (seen.has(src) && !seen.has(dst)) { seen.add(dst); hot.add(dst); grew = true; }
+      }
+    }
+  };
+  walk(false);
+  walk(true);
+  return hot;
+}
+function depSummary(tasks, board, phase) {
+  const byId = Object.fromEntries(tasks.map(t => [t.id, t]));
+  const shown = phase === 'all' ? tasks.filter(t => t.status !== 'done') : tasks.filter(t => t.phase === phase && t.status !== 'done');
+  const bits = [];
+  const ready = shown.filter(t => why(t, byId, board).kind === 'ready');
+  if (ready.length) bits.push(ready.map(t => {
+    const blocks = tasks.filter(x => x.status !== 'done' && x.deps.includes(t.id)).map(x => x.id);
+    return esc(t.id) + ' can start' + (blocks.length ? ', and blocks ' + esc(blocks.join(', ')) : '');
+  }).join('. ') + '.');
+  else bits.push('Nothing in this view can start.');
+  const humans = shown.filter(t => why(t, byId, board).kind === 'human');
+  if (humans.length) bits.push(humans.map(t => {
+    const blocks = tasks.filter(x => x.status !== 'done' && x.deps.includes(t.id)).map(x => x.id);
+    return esc(t.id) + ' needs a person' + (blocks.length ? ' and blocks ' + esc(blocks.join(', ')) : '');
+  }).join('. ') + '.');
+  if (phase !== 'all') {
+    const waiting = tasks.filter(t => t.status !== 'done' && t.phase !== phase && why(t, byId, board).kind === 'gate' && why(t, byId, board).label === 'gate ' + phase);
+    if (waiting.length) bits.push(waiting.length + (waiting.length === 1 ? ' later task has its dependencies done and waits' : ' later tasks have their dependencies done and wait') + ' for gate ' + esc(phase) + '.');
+  }
+  return bits.join(' ');
+}
+function drawDeps() {
+  const board = state.board || { jobs: [], gates: {} };
+  const tasks = state.tasks || [];
+  const phase = depPhase || currentPhase(tasks);
+  const phases = [...PHASES, 'all'];
+  $('depPhases').innerHTML = phases.map(p => `<button type="button" data-phase="${esc(p)}" aria-pressed="${p === phase}">${p === 'all' ? 'All open' : esc(p)}</button>`).join('');
+  [...$('depPhases').children].forEach(b => b.onclick = () => { depPhase = b.dataset.phase; depFocus = null; depSig = ''; drawDeps(); });
+  $('depSummary').innerHTML = tasks.length ? depSummary(tasks, board, phase) : 'No task board loaded. Serve this page from the repo root.';
+  if (!tasks.length) { $('depScroll').innerHTML = ''; return; }
+  const model = graphModel(tasks, board, phase);
+  const sig = JSON.stringify({ phase, focus: depFocus, nodes: model.nodes.map(n => [n.id, n.kind, n.label]), edges: model.edges });
+  if (sig === depSig) return;
+  depSig = sig;
+  const scroll = $('depScroll');
+  const left = scroll.scrollLeft, top = scroll.scrollTop;
+  const lay = layoutGraph(model.nodes, model.edges);
+  const hot = depFocus ? related(depFocus, model.edges) : null;
+  const paths = model.edges.map(([from, to, done]) => {
+    const a = lay.pos[from], b = lay.pos[to]; if (!a || !b) return '';
+    const x1 = a.x + lay.NW, y1 = a.y + lay.NH / 2, x2 = b.x, y2 = b.y + lay.NH / 2, c = Math.max(28, (x2 - x1) / 2);
+    const on = hot && hot.has(from) && hot.has(to);
+    return `<path data-from="${esc(from)}" data-to="${esc(to)}" class="${on ? 'hot' : ''}" d="M ${x1} ${y1} C ${x1 + c} ${y1}, ${x2 - c} ${y2}, ${x2 - 8} ${y2}" fill="none" stroke="${done ? 'var(--pass)' : 'var(--muted)'}" stroke-width="1.5" ${done ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow)"/>`;
+  }).join('');
+  const nodes = model.nodes.map(n => {
+    const p = lay.pos[n.id];
+    const title = n.title.length > 52 ? n.title.slice(0, 50) + '…' : n.title;
+    return `<button type="button" class="card node kind-${esc(n.kind)} ${hot && hot.has(n.id) ? 'hot' : ''}" data-dep="${esc(n.id)}" aria-pressed="${n.id === depFocus}" style="left:${p.x}px;top:${p.y}px" title="${esc(n.id)} ${esc(n.title)} — ${esc(n.label)}">
+      <b>${esc(n.id.startsWith('gate:') ? 'Gate ' + n.id.slice(5) : n.id)}</b>
+      <span class="nt">${esc(n.id.startsWith('gate:') ? 'Earlier phase must be finished' : title)}</span>
+      <small>${esc(n.label)}</small>
+    </button>`;
+  }).join('');
+  scroll.innerHTML = `<div class="graph ${hot ? 'focusing' : ''}" style="width:${lay.width}px;height:${lay.height}px">
+    <svg width="${lay.width}" height="${lay.height}" aria-hidden="true"><defs><marker id="arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--muted)"/></marker></defs>${paths}</svg>
+    ${nodes}
+  </div>`;
+  scroll.scrollLeft = left; scroll.scrollTop = top;
+  scroll.querySelectorAll('.node').forEach(btn => btn.onclick = () => {
+    depFocus = depFocus === btn.dataset.dep ? null : btn.dataset.dep;
+    depSig = '';
+    drawDeps();
+  });
+}
+
+function applyView() {
+  const deps = depsOpen();
+  $('depsView').hidden = !deps;
+  $('layout').hidden = deps;
+  $('viewBoard').toggleAttribute('aria-current', !deps);
+  $('viewDeps').toggleAttribute('aria-current', deps);
+  if (!deps) $('viewBoard').setAttribute('aria-current', 'page');
+  if (deps) $('viewDeps').setAttribute('aria-current', 'page');
+}
 
 function render() {
   const { board, tasks } = state;
@@ -194,6 +417,8 @@ function render() {
     <section><h3>Needs a human</h3>${c.human.length ? `<ul>${c.human.map(li).join('')}</ul>` : '<p class="empty">None.</p>'}</section>
     ${c.blocked.length ? `<section><h3>Blocked</h3><ul>${c.blocked.map(li).join('')}</ul></section>` : ''}
     ${board.queue?.length ? `<section><h3>Orchestrator queue</h3><p>${board.queue.map(esc).join(' · ')}</p></section>` : ''}`;
+  applyView();
+  if (depsOpen()) drawDeps();
 }
 
 // ---- job viewer ----
@@ -255,7 +480,8 @@ async function refresh() {
   state = { board, tasks: parseBoard(boardMd) };
   render();
 }
-$('board').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openJob(c.dataset.id); });
+$('board').addEventListener('click', e => { const c = e.target.closest('.card'); if (c && c.dataset.id) openJob(c.dataset.id); });
+addEventListener('hashchange', () => { applyView(); if (depsOpen()) drawDeps(); });
 $('dlgClose').onclick = () => $('dlg').close();
 $('dir').onclick = () => { const h = document.documentElement; h.dir = h.dir === 'rtl' ? 'ltr' : 'rtl'; };
 refresh(); setInterval(refresh, 3000);

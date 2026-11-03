@@ -110,7 +110,7 @@ A task is not done if it lowers coverage of `packages/core` or skips its accepta
 
 ## How to work on a task
 
-**Automated:** run `/factory next` (or `/factory run`) and watch `factory/dashboard.html`. The `factory` skill runs the steps below with subagents (spec-writer → builder → reviewers → approver → pull request on GitHub). In this repository the orchestrator also merges the pull requests it opens. The factory skill still describes a human merge as its default; that default is not changed. **By hand:**
+**Automated:** run `/factory next` (or `/factory run`) and watch `factory/dashboard.html`. Open its Dependencies link to see which task blocks which. The `factory` skill runs the steps below with subagents (spec-writer → builder → reviewers → approver → pull request on GitHub). In this repository the orchestrator also merges the pull requests it opens. The factory skill still describes a human merge as its default; that default is not changed. **By hand:**
 
 1. Open `docs/tasks/BOARD.md`, pick the first `todo` task whose dependencies are all `done`. Use the `pick-task` skill.
 2. Mark it `in-progress` with your name/session, on a branch `t###-short-name`.

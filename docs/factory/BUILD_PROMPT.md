@@ -102,7 +102,7 @@ from the next phase while its gate is closed; it reports "waiting for gate P1" i
     approver.md                    # new
 factory/
   board.json                       # durable runtime state, drives the dashboard
-  dashboard.html                   # visual board, polls board.json
+  dashboard.html                   # visual board, polls board.json; Dependencies link draws the backlog graph
   jobs/T040-submit-mcq/            # one folder per job (task id + slug)
     task.md                        # copy of the task section from its epic file
     spec.md
