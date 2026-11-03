@@ -10,6 +10,7 @@ import {
   InMemoryMembershipRepo,
 } from './in-memory-community-store';
 import { InMemoryUserRepo } from './in-memory-user-repo';
+import { InMemorySeasonRepo } from './in-memory-season-repo';
 import { makeTestDeps } from './make-test-deps';
 
 describe('makeTestDeps', () => {
@@ -31,6 +32,7 @@ describe('makeTestDeps', () => {
     expect(deps.communities).toBeInstanceOf(InMemoryCommunityRepo);
     expect(deps.memberships).toBeInstanceOf(InMemoryMembershipRepo);
     expect(deps.invites).toBeInstanceOf(InMemoryInviteRepo);
+    expect(deps.seasons).toBeInstanceOf(InMemorySeasonRepo);
   });
 
   it('shares one community store between the default repos', async () => {
@@ -57,6 +59,7 @@ describe('makeTestDeps', () => {
     expect(a.communities).not.toBe(b.communities);
     expect(a.memberships).not.toBe(b.memberships);
     expect(a.invites).not.toBe(b.invites);
+    expect(a.seasons).not.toBe(b.seasons);
   });
 
   it('uses overriding fakes', () => {
@@ -84,5 +87,12 @@ describe('makeTestDeps', () => {
     });
     expect(await store.memberships.get(membership.tenantId, membership.userId)).not.toBeNull();
     expect(await deps.memberships.listByUser(membership.userId)).toEqual([]);
+  });
+
+  it('replaces only the seasons repo that was overridden', () => {
+    const seasons = new InMemorySeasonRepo();
+    const deps = makeTestDeps({ seasons });
+    expect(deps.seasons).toBe(seasons);
+    expect(deps.communities).not.toBe(seasons);
   });
 });
