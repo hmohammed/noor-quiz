@@ -99,13 +99,16 @@ function ProfileEditor({
   const [deleteStatus, setDeleteStatus] = useState<DeleteAccountStatus>('idle');
   const values: ProfileValues = { ...valuesOf(me), ...draft };
 
+  const deleteLocked = deleteStatus !== 'idle';
+
   const handleChange = <K extends keyof ProfileValues>(field: K, value: ProfileValues[K]) => {
+    if (deleteLocked) return;
     setDraft((d) => ({ ...d, [field]: value }));
     if (status !== 'saving') setStatus('idle');
   };
 
   const handleSubmit = () => {
-    if (status === 'saving') return;
+    if (deleteLocked || status === 'saving') return;
     const patch = changedFields(me, values);
     if (Object.keys(patch).length === 0) {
       setStatus('saved');
@@ -149,6 +152,7 @@ function ProfileEditor({
       timeZones={timeZones}
       onChange={handleChange}
       onSubmit={handleSubmit}
+      locked={deleteLocked}
       afterForm={
         <DeleteAccountView
           status={deleteStatus}

@@ -32,6 +32,8 @@ export interface ProfileFormViewProps {
   onRetry?(): void;
   /** Rendered after the form, only in the form state. Never inside the `<form>`. */
   afterForm?: ReactNode;
+  /** Delete confirmation is open: fields and save must not send another PATCH. */
+  locked?: boolean;
 }
 
 const NAME_ID = 'profile-display-name';
@@ -48,6 +50,7 @@ export function ProfileFormView({
   onSignIn,
   onRetry,
   afterForm,
+  locked = false,
 }: ProfileFormViewProps) {
   const title = <h1 className="profile__title">{t('profile.title')}</h1>;
 
@@ -118,6 +121,7 @@ export function ProfileFormView({
             autoComplete="nickname"
             className="profile-form__control"
             value={values.displayName}
+            disabled={locked || undefined}
             aria-invalid={invalidName || undefined}
             aria-describedby={invalidName ? `${NAME_HINT_ID} ${NAME_ERROR_ID}` : NAME_HINT_ID}
             onChange={(e) => onChange('displayName', e.target.value)}
@@ -139,6 +143,7 @@ export function ProfileFormView({
             name="locale"
             className="profile-form__control"
             value={values.locale}
+            disabled={locked || undefined}
             onChange={(e) => onChange('locale', e.target.value as Locale)}
           >
             {values.locale === '' && <option value="">{t('profile.localeUnset')}</option>}
@@ -158,6 +163,7 @@ export function ProfileFormView({
             className="profile-form__control"
             dir="ltr"
             value={values.timezone}
+            disabled={locked || undefined}
             onChange={(e) => onChange('timezone', e.target.value)}
           >
             {zones.map((tz) =>
@@ -175,7 +181,7 @@ export function ProfileFormView({
         </div>
 
         <div className="profile-form__actions">
-          <button type="submit" className="auth__button" disabled={saving}>
+          <button type="submit" className="auth__button" disabled={saving || locked}>
             {saving ? t('profile.saving') : t('profile.save')}
           </button>
           {status === 'saved' && (

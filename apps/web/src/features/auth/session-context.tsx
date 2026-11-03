@@ -80,8 +80,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
-  // Hoisted so deleteAccount can cancel an in-flight /v1/me before the DELETE.
-  // A late PATCH would run requireUser() and recreate the user that was just deleted.
+  // Hoisted so deleteAccount can cancel an in-flight /v1/me load, the timezone-default
+  // PATCH, and updateMe before the DELETE. A late PATCH would run requireUser() and
+  // recreate the user that was just deleted.
   const cancelPending = useCallback(() => {
     generation.current += 1;
     pending.current?.abort();
@@ -146,8 +147,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const updateMe = useCallback(async (patch: UpdateMeRequestInput) => {
     const current = generation.current;
     const idToken = await getIdToken();
+    // deleteAccount bumps generation and aborts `pending` before DELETE. Do not start
+    // the PATCH after that, or requireUser() would create a new account.
+    if (current !== generation.current) throw new ApiError('Not signed in', { status: 401 });
     if (idToken === null) throw new ApiError('Not signed in', { status: 401 });
-    const me = await apiClient.updateMe({ idToken, body: patch });
+    let controller = pending.current;
+    if (!controller || controller.signal.aborted) {
+      controller = new AbortController();
+      pending.current = controller;
+    }
+    const me = await apiClient.updateMe({
+      idToken,
+      body: patch,
+      signal: controller.signal,
+    });
     if (current === generation.current) setState({ kind: 'signed-in', me });
     return me;
   }, []);
