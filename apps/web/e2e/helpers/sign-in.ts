@@ -52,3 +52,26 @@ export async function signInWithEmulator(
   await popup.getByRole('button', { name: 'Sign in with Google.com' }).click();
   return meResponse;
 }
+
+/**
+ * Signs in again with an account the Auth emulator already has, picked by email from
+ * the popup list (not "Add new account"). Resolves with the following `GET /v1/me`.
+ */
+export async function signInAgainWithEmulator(
+  page: Page,
+  { email }: { email: string },
+): Promise<Response> {
+  await page
+    .context()
+    .route(/^https:\/\/(unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//, (route) =>
+      route.abort(),
+    );
+
+  const popupPromise = page.waitForEvent('popup');
+  await page.getByRole('banner').getByRole('button', { name: 'Sign in with Google' }).click();
+  const popup = await popupPromise;
+
+  const meResponse = page.waitForResponse(isGetMe);
+  await popup.locator('.js-reuse-account').filter({ hasText: email }).click();
+  return meResponse;
+}
