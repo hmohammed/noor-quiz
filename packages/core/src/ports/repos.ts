@@ -1,3 +1,4 @@
+import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
 
@@ -6,9 +7,10 @@ import type { Identity, IdentityKey, User, UserId } from '../users/user';
  * design. A person is one user across every tenant, so AGENT.md rule 4 does not apply.
  *
  * Doc shapes:
- * - `users/{userId}` (ULID): `{ id, displayName, locale, timezone, createdAt, updatedAt,
- *   schemaVersion: 1 }`. `locale` and `timezone` are nullable and were added in T011;
- *   readers treat a missing key as null.
+ * - `users/{userId}` (ULID): `{ id, displayName, locale, timezone, consent, createdAt,
+ *   updatedAt, schemaVersion: 1 }`. `locale` and `timezone` are nullable and were added
+ *   in T011; `consent: { version, acceptedAt } | null` was added in T013a. Readers treat
+ *   a missing key as null.
  * - `identities/{provider}_{subject}`: `{ id, provider, subject, userId, email,
  *   emailVerified, createdAt, schemaVersion: 1 }`. The deterministic id is what makes
  *   one identity map to exactly one user.
@@ -32,4 +34,9 @@ export interface UserRepo {
    * Throws NOT_FOUND for an unknown user, VALIDATION for a non-ULID id.
    */
   updateProfile(userId: UserId, patch: ProfilePatch, updatedAt: string): Promise<User>;
+  /**
+   * Writes only `consent` and `updatedAt`, returns the stored user. Throws NOT_FOUND for
+   * an unknown user, VALIDATION for a non-ULID id or a consent that fails `isValidConsent`.
+   */
+  recordConsent(userId: UserId, consent: Consent, updatedAt: string): Promise<User>;
 }

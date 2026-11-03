@@ -1,5 +1,6 @@
 import { DomainError } from '../errors';
 import type { TimeZone } from '../time/zoned';
+import type { Consent } from './consent';
 import type { Locale } from './profile';
 
 /** Our own user id: a ULID (AGENT.md rule 8). Never a provider uid. */
@@ -39,6 +40,8 @@ export interface User {
   locale: Locale | null;
   /** IANA zone; null until set (the web defaults it from the browser on first sign-in). */
   timezone: TimeZone | null;
+  /** Null until accepted; docs from before T013a read as null. */
+  consent: Consent | null;
   /** UTC ISO string from the Clock. */
   createdAt: string;
   /** UTC ISO string from the Clock. */

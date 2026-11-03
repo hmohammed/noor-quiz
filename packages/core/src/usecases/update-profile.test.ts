@@ -47,6 +47,9 @@ function mapRepo() {
       users.set(id, next);
       return { ...next };
     }),
+    recordConsent: vi.fn(async () => {
+      throw new Error('not used here');
+    }),
   } satisfies UserRepo;
   return { repo, users };
 }
@@ -63,6 +66,7 @@ function seeded() {
     displayName: 'Alice',
     locale: null,
     timezone: null,
+    consent: null,
     createdAt: AT,
     updatedAt: AT,
     schemaVersion: 1,
@@ -106,6 +110,7 @@ describe('updateProfile', () => {
       displayName: 'Alice',
       locale: 'am',
       timezone: 'Europe/Stockholm',
+      consent: null,
       createdAt: AT,
       updatedAt: '2026-01-02T00:00:00.000Z',
       schemaVersion: 1,
