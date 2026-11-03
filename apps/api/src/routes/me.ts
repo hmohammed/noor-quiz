@@ -3,6 +3,7 @@ import { bodyLimit } from 'hono/body-limit';
 import {
   acceptConsent,
   CURRENT_CONSENT_VERSION,
+  deleteAccount,
   DomainError,
   updateProfile,
   type User,
@@ -11,7 +12,7 @@ import { AcceptConsentRequest, MeResponse, UpdateMeRequest } from '@noor/contrac
 import type { AppEnv, RequestUser } from '../app-env';
 import { parseJsonBody } from '../http/parse-json-body';
 import { requireConsent } from '../middleware/require-consent';
-import { requireUser } from '../middleware/require-user';
+import { requireIdentity, requireUser } from '../middleware/require-user';
 
 const MAX_BODY_BYTES = 4096;
 
@@ -64,5 +65,9 @@ export function meRoutes(): Hono<AppEnv> {
       const { version } = await parseJsonBody(c, AcceptConsentRequest);
       const user = await acceptConsent(c.var.deps, { userId: c.var.user.id, version });
       return c.json(meBody(requestUserOf(user)), 200);
+    })
+    .delete('/v1/me', requireIdentity(), async (c) => {
+      await deleteAccount(c.var.deps, { identity: c.var.identity });
+      return c.body(null, 204);
     });
 }

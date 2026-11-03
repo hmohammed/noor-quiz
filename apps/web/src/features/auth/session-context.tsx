@@ -39,6 +39,8 @@ export interface Session {
    * ConsentOutdatedError (after replacing `me`) when the terms changed meanwhile.
    */
   acceptConsent(): Promise<MeResponse>;
+  /** Deletes the account, then signs out. A failed delete leaves the session signed in. */
+  deleteAccount(): Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -68,7 +70,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       { signal, isCurrent }: { signal?: AbortSignal; isCurrent: () => boolean },
     ) => {
       const body = timezoneDefault(me, browserTimeZone());
-      if (body === null) return;
+      if (body === null || !isCurrent()) return;
       apiClient.updateMe({ idToken, body, signal }).then(
         (updated) => {
           if (isCurrent()) setState({ kind: 'signed-in', me: updated });
@@ -78,15 +80,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+  // Hoisted so deleteAccount can cancel an in-flight /v1/me load, the timezone-default
+  // PATCH, and updateMe before the DELETE. A late PATCH would run requireUser() and
+  // recreate the user that was just deleted.
+  const cancelPending = useCallback(() => {
+    generation.current += 1;
+    pending.current?.abort();
+    pending.current = null;
+  }, []);
 
   useEffect(() => {
     if (!isConfigured()) return;
-
-    const cancelPending = () => {
-      generation.current += 1;
-      pending.current?.abort();
-      pending.current = null;
-    };
 
     const unsubscribe = onChange((signedIn) => {
       cancelPending();
@@ -125,7 +129,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       unsubscribe();
       cancelPending();
     };
-  }, [applyTimezoneDefault]);
+  }, [applyTimezoneDefault, cancelPending]);
 
   const signIn = useCallback(() => {
     setState({ kind: 'loading' });
@@ -143,8 +147,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const updateMe = useCallback(async (patch: UpdateMeRequestInput) => {
     const current = generation.current;
     const idToken = await getIdToken();
+    // deleteAccount bumps generation and aborts `pending` before DELETE. Do not start
+    // the PATCH after that, or requireUser() would create a new account.
+    if (current !== generation.current) throw new ApiError('Not signed in', { status: 401 });
     if (idToken === null) throw new ApiError('Not signed in', { status: 401 });
-    const me = await apiClient.updateMe({ idToken, body: patch });
+    let controller = pending.current;
+    if (!controller || controller.signal.aborted) {
+      controller = new AbortController();
+      pending.current = controller;
+    }
+    const me = await apiClient.updateMe({
+      idToken,
+      body: patch,
+      signal: controller.signal,
+    });
     if (current === generation.current) setState({ kind: 'signed-in', me });
     return me;
   }, []);
@@ -160,7 +176,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const me = await acceptCurrentConsent(apiClient, { idToken, me: snapshot.me });
       if (isCurrent()) {
         setState({ kind: 'signed-in', me });
-        applyTimezoneDefault(idToken, me, { isCurrent });
+        // Same controller deleteAccount aborts. The sign-in load never sends this PATCH,
+        // because timezoneDefault waits until consent is accepted.
+        let controller = pending.current;
+        if (!controller || controller.signal.aborted) {
+          controller = new AbortController();
+          pending.current = controller;
+        }
+        applyTimezoneDefault(idToken, me, { signal: controller.signal, isCurrent });
       }
       return me;
     } catch (err) {
@@ -171,9 +194,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [applyTimezoneDefault]);
 
+  const deleteAccount = useCallback(async () => {
+    cancelPending();
+    const idToken = await getIdToken();
+    if (idToken === null) throw new ApiError('Not signed in', { status: 401 });
+    await apiClient.deleteMe({ idToken });
+    try {
+      await sessionSignOut();
+    } catch {
+      // The account is already gone. Sign-out failed, so keep a session error and resolve.
+      setState({ kind: 'error', hasSession: true });
+    }
+  }, [cancelPending]);
+
   const value = useMemo(
-    () => ({ state, signIn, signOut, updateMe, acceptConsent }),
-    [state, signIn, signOut, updateMe, acceptConsent],
+    () => ({ state, signIn, signOut, updateMe, acceptConsent, deleteAccount }),
+    [state, signIn, signOut, updateMe, acceptConsent, deleteAccount],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

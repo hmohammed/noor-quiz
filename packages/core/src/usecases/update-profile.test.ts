@@ -50,6 +50,9 @@ function mapRepo() {
     recordConsent: vi.fn(async () => {
       throw new Error('not used here');
     }),
+    deleteUserAndIdentities: vi.fn(async () => {
+      throw new Error('not used here');
+    }),
   } satisfies UserRepo;
   return { repo, users };
 }

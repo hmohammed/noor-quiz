@@ -50,7 +50,16 @@ function setup(deps: TestDeps = makeTestDeps()) {
       },
       body: raw ? (body as string) : JSON.stringify(body),
     });
-  return { app, deps, getMe, patchMe, postConsent };
+  const deleteMe = (authorization?: string, body?: unknown) =>
+    app.request('/v1/me', {
+      method: 'DELETE',
+      headers: {
+        ...(authorization === undefined ? {} : { authorization }),
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  return { app, deps, getMe, patchMe, postConsent, deleteMe };
 }
 
 async function expect400(res: Response): Promise<void> {
@@ -107,6 +116,22 @@ async function expect401(res: Response): Promise<string> {
   const text = await res.text();
   expect(ErrorResponse.parse(JSON.parse(text)).error.code).toBe('UNAUTHENTICATED');
   return text;
+}
+
+/** Counts writes so a repeated DELETE can prove it created and deleted nothing. */
+class SpyUserRepo extends InMemoryUserRepo {
+  creates = 0;
+  deletes = 0;
+
+  override async createWithIdentity(user: User, linked: Identity) {
+    this.creates += 1;
+    return super.createWithIdentity(user, linked);
+  }
+
+  override async deleteUserAndIdentities(userId: UserId) {
+    this.deletes += 1;
+    return super.deleteUserAndIdentities(userId);
+  }
 }
 
 /** Leaks provider data on every returned user, to prove the route never spreads a user. */
@@ -675,5 +700,185 @@ describe('POST /v1/me/consent', () => {
     });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /v1/me', () => {
+  it('returns 204 and the same token starts over with a new user', async () => {
+    const { deps, getMe, patchMe, deleteMe } = setup();
+    const { authorization, userId } = await signedIn(deps);
+    expect(
+      (
+        await patchMe(authorization, {
+          displayName: 'Åsa',
+          locale: 'sv',
+          timezone: 'Europe/Stockholm',
+        })
+      ).status,
+    ).toBe(200);
+
+    const res = await deleteMe(authorization);
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    expect(deps.users.counts()).toEqual({ users: 0, identities: 0 });
+    expect(await deps.users.getById(userId as UserId)).toBeNull();
+
+    const again = await getMe(authorization);
+    expect(again.status).toBe(200);
+    const body = MeResponse.parse(await again.json());
+    expect(body.userId).not.toBe(userId);
+    expect(body).toEqual({
+      userId: body.userId,
+      displayName: 'Alice',
+      locale: null,
+      timezone: null,
+      consent: CONSENT_REQUIRED,
+    });
+  });
+
+  it('returns 204 twice, and the second call creates and deletes nothing', async () => {
+    const spy = new SpyUserRepo();
+    const deps = makeTestDeps({ users: spy });
+    const { deleteMe } = setup(deps);
+    const { authorization } = await signedIn(deps);
+
+    const first = await deleteMe(authorization);
+    expect(first.status).toBe(204);
+    expect(await first.text()).toBe('');
+    expect(deps.users.counts()).toEqual({ users: 0, identities: 0 });
+
+    spy.creates = 0;
+    spy.deletes = 0;
+    const second = await deleteMe(authorization);
+
+    expect(second.status).toBe(204);
+    expect(await second.text()).toBe('');
+    expect(deps.users.counts()).toEqual({ users: 0, identities: 0 });
+    expect(spy.creates).toBe(0);
+    expect(spy.deletes).toBe(0);
+  });
+
+  it('returns 204 for a token that was never used and creates nothing', async () => {
+    const spy = new SpyUserRepo();
+    const deps = makeTestDeps({ users: spy });
+    const { deleteMe } = setup(deps);
+    const token = deps.auth.issue(identity());
+
+    const res = await deleteMe(`Bearer ${token}`);
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    expect(deps.users.counts()).toEqual({ users: 0, identities: 0 });
+    expect(spy.creates).toBe(0);
+    expect(spy.deletes).toBe(0);
+  });
+
+  it('deletes a user who has not accepted consent', async () => {
+    const { deps, deleteMe } = setup();
+    const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+
+    const res = await deleteMe(authorization);
+
+    expect(res.status).toBe(204);
+    expect(await deps.users.getById(userId as UserId)).toBeNull();
+    expect(deps.users.counts()).toEqual({ users: 0, identities: 0 });
+  });
+
+  it('deletes a user whose consent is an older version', async () => {
+    const { deps, deleteMe } = setup();
+    const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+    const at = '2025-01-01T00:00:00.000Z';
+    await deps.users.recordConsent(userId as UserId, { version: '2000-01-01', acceptedAt: at }, at);
+
+    const res = await deleteMe(authorization);
+
+    expect(res.status).toBe(204);
+    expect(await deps.users.getById(userId as UserId)).toBeNull();
+  });
+
+  describe('401 UNAUTHENTICATED and the seeded user is unchanged', () => {
+    const cases = [
+      'no Authorization header',
+      'a Basic scheme',
+      'an unknown token',
+      'a token the verifier rejects',
+      'a verified subject a/b',
+    ] as const;
+
+    it.each(cases)('%s', async (kind) => {
+      const { deps, deleteMe } = setup();
+      const { authorization, userId, stored } = await signedIn(deps);
+      const beforeVerify = deps.auth.verifyCalls;
+      let header: string | undefined;
+      if (kind === 'no Authorization header') header = undefined;
+      else if (kind === 'a Basic scheme') header = 'Basic abc';
+      else if (kind === 'an unknown token') header = 'Bearer fake-token-999';
+      else if (kind === 'a token the verifier rejects') {
+        deps.auth.reject(authorization.slice('Bearer '.length));
+        header = authorization;
+      } else {
+        header = `Bearer ${deps.auth.issue(identity({ subject: 'a/b' }))}`;
+      }
+
+      await expect401(await deleteMe(header));
+
+      if (kind === 'no Authorization header' || kind === 'a Basic scheme') {
+        expect(deps.auth.verifyCalls).toBe(beforeVerify);
+      }
+      expect(await deps.users.getById(userId as UserId)).toStrictEqual(stored);
+      expect(deps.users.counts()).toEqual({ users: 1, identities: 1 });
+    });
+  });
+
+  it("user A's delete removes only user A; user B is unchanged", async () => {
+    const { deps, getMe, deleteMe } = setup();
+    const a = await signedIn(deps, { subject: 'uid-alice', name: 'Alice' });
+    const b = await signedIn(deps, { subject: 'uid-bob', name: 'Bob' });
+
+    const res = await deleteMe(a.authorization);
+
+    expect(res.status).toBe(204);
+    expect(await deps.users.getById(a.userId as UserId)).toBeNull();
+    expect(JSON.stringify(await deps.users.getById(b.userId as UserId))).toBe(
+      JSON.stringify(b.stored),
+    );
+    expect(MeResponse.parse(await (await getMe(b.authorization)).json()).userId).toBe(b.userId);
+  });
+
+  it('ignores a JSON body and still deletes only the caller', async () => {
+    const { deps, deleteMe } = setup();
+    const a = await signedIn(deps, { subject: 'uid-alice', name: 'Alice' });
+    const b = await signedIn(deps, { subject: 'uid-bob', name: 'Bob' });
+
+    const res = await deleteMe(a.authorization, { userId: b.userId });
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    expect(await deps.users.getById(a.userId as UserId)).toBeNull();
+    expect(JSON.stringify(await deps.users.getById(b.userId as UserId))).toBe(
+      JSON.stringify(b.stored),
+    );
+  });
+
+  it('204 and 401 bodies never contain the provider subject or email', async () => {
+    const { deps, getMe, deleteMe } = setup();
+    const token = deps.auth.issue(
+      identity({ subject: SENTINEL_SUBJECT, email: SENTINEL_EMAIL, name: 'Sentinel' }),
+    );
+    const authorization = `Bearer ${token}`;
+    expect((await getMe(authorization)).status).toBe(200);
+
+    const ok = await deleteMe(authorization);
+    const okText = await ok.text();
+    expect(ok.status).toBe(204);
+    expect(okText).not.toContain(SENTINEL_SUBJECT);
+    expect(okText).not.toContain(SENTINEL_EMAIL);
+
+    deps.auth.reject(token);
+    const deniedText = await expect401(await deleteMe(authorization));
+    expect(deniedText).not.toContain(SENTINEL_SUBJECT);
+    expect(deniedText).not.toContain(SENTINEL_EMAIL);
+    expect(deniedText).not.toContain(token);
   });
 });

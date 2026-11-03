@@ -5,7 +5,9 @@ import {
   CURRENT_CONSENT_VERSION,
   getOrCreateUser,
   isDomainError,
+  USER_SCHEMA_VERSION,
   type DomainErrorCode,
+  type Identity,
   type UserId,
 } from '@noor/core';
 import { FakeClock, FakeIdGenerator, runUserRepoContract } from '@noor/testkit';
@@ -53,9 +55,22 @@ async function expectDomainError(p: Promise<unknown>, code: DomainErrorCode): Pr
   expect((err as { code: string }).code).toBe(code);
 }
 
+async function addIdentity(identity: Identity): Promise<void> {
+  await db.collection('identities').doc(identity.id).set({
+    id: identity.id,
+    provider: identity.provider,
+    subject: identity.subject,
+    userId: identity.userId,
+    email: identity.email,
+    emailVerified: identity.emailVerified,
+    createdAt: identity.createdAt,
+    schemaVersion: identity.schemaVersion,
+  });
+}
+
 runUserRepoContract('FirestoreUserRepo (emulator)', async () => {
   await clear();
-  return { repo: new FirestoreUserRepo(db), counts };
+  return { repo: new FirestoreUserRepo(db), counts, addIdentity };
 });
 
 describe('FirestoreUserRepo (emulator only)', () => {
@@ -230,5 +245,71 @@ describe('FirestoreUserRepo (emulator only)', () => {
     });
     const raw = (await db.collection('users').doc(ULID).get()).data();
     expect(raw).toStrictEqual({ ...legacy, consent, updatedAt: later });
+  });
+
+  it('removes an orphan identities doc whose user doc is already gone', async () => {
+    await db.collection('identities').doc('firebase_orphan').set({
+      id: 'firebase_orphan',
+      provider: 'firebase',
+      subject: 'orphan',
+      userId: ULID,
+      email: null,
+      emailVerified: false,
+      createdAt: AT,
+      schemaVersion: USER_SCHEMA_VERSION,
+    });
+
+    await expect(repo.deleteUserAndIdentities(ULID)).resolves.toBeUndefined();
+
+    expect((await db.collection('identities').doc('firebase_orphan').get()).exists).toBe(false);
+    expect(await counts()).toEqual({ users: 0, identities: 0 });
+  });
+
+  it('removes corrupt user and identity docs that the converter would reject', async () => {
+    await db.collection('users').doc(ULID).set({ id: ULID, schemaVersion: 2 });
+    await db.collection('identities').doc('firebase_corrupt').set({
+      userId: ULID,
+      schemaVersion: 2,
+    });
+
+    await expect(repo.deleteUserAndIdentities(ULID)).resolves.toBeUndefined();
+
+    expect((await db.collection('users').doc(ULID).get()).exists).toBe(false);
+    expect((await db.collection('identities').doc('firebase_corrupt').get()).exists).toBe(false);
+  });
+
+  it('leaves no raw doc whose id is the user or whose userId field is the user', async () => {
+    await repo.createWithIdentity(
+      {
+        id: ULID,
+        displayName: 'Alice',
+        locale: null,
+        timezone: null,
+        consent: null,
+        createdAt: AT,
+        updatedAt: AT,
+        schemaVersion: USER_SCHEMA_VERSION,
+      },
+      {
+        id: 'firebase_uid-alice',
+        provider: 'firebase',
+        subject: 'uid-alice',
+        userId: ULID,
+        email: null,
+        emailVerified: false,
+        createdAt: AT,
+        schemaVersion: USER_SCHEMA_VERSION,
+      },
+    );
+    await db.collection('identities').doc(ULID).set({ userId: ULID, schemaVersion: 2 });
+
+    await repo.deleteUserAndIdentities(ULID);
+
+    expect((await db.collection('users').doc(ULID).get()).exists).toBe(false);
+    expect((await db.collection('identities').doc(ULID).get()).exists).toBe(false);
+    const identities = await db.collection('identities').where('userId', '==', ULID).get();
+    const users = await db.collection('users').where('userId', '==', ULID).get();
+    expect(identities.empty).toBe(true);
+    expect(users.empty).toBe(true);
   });
 });

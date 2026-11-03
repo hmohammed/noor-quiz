@@ -114,6 +114,22 @@ describe('ProfileFormView', () => {
     expect(html).not.toContain('disabled');
   });
 
+  it('locked: the fields and the save button are disabled', () => {
+    const html = renderToStaticMarkup(
+      <ProfileFormView
+        state={{ kind: 'form', status: 'idle', values: VALUES }}
+        timeZones={ZONES}
+        onChange={noop}
+        onSubmit={noop}
+        locked
+      />,
+    );
+    expect(html).toMatch(/<input[^>]*id="profile-display-name"[^>]*disabled=""/);
+    expect(html).toMatch(/<select[^>]*id="profile-locale"[^>]*disabled=""/);
+    expect(html).toMatch(/<select[^>]*id="profile-timezone"[^>]*disabled=""/);
+    expect(html).toMatch(/<button type="submit"[^>]*disabled=""/);
+  });
+
   it('saved: a status message', () => {
     expect(form('saved')).toMatch(new RegExp(`<p role="status"[^>]*>${en['profile.saved']}</p>`));
   });

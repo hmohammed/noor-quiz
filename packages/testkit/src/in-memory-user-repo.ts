@@ -13,9 +13,9 @@ import {
 } from '@noor/core';
 
 /**
- * In-memory UserRepo. `createWithIdentity` checks and inserts with no `await` in
- * between, so it is atomic under `Promise.all`. Returns copies, never stored objects
- * (`#copy` also copies the nested `consent`, the only non-flat field).
+ * In-memory UserRepo. `createWithIdentity` and `deleteUserAndIdentities` read and write
+ * with no `await` in between, so they are atomic under `Promise.all`. Returns copies,
+ * never stored objects (`#copy` also copies the nested `consent`, the only non-flat field).
  */
 export class InMemoryUserRepo implements UserRepo {
   readonly #users = new Map<string, User>();
@@ -71,6 +71,26 @@ export class InMemoryUserRepo implements UserRepo {
     };
     this.#users.set(id, next);
     return this.#copy(next);
+  }
+
+  async deleteUserAndIdentities(userId: UserId): Promise<void> {
+    const id = asUserId(userId);
+    this.#users.delete(id);
+    for (const [key, identity] of this.#identities) {
+      if (identity.userId === id) this.#identities.delete(key);
+    }
+  }
+
+  /**
+   * Test-only. Attaches an identity that already names a stored user, without the
+   * user-id collision guard on `createWithIdentity`. Not part of `UserRepo`.
+   */
+  async addIdentity(identity: Identity): Promise<void> {
+    const id = identityId(identity);
+    const userId = asUserId(identity.userId);
+    if (id !== identity.id) throw new DomainError('VALIDATION', { reason: 'identity-mismatch' });
+    if (!this.#users.has(userId)) throw new DomainError('NOT_FOUND', { reason: 'user-not-found' });
+    this.#identities.set(id, { ...identity, userId });
   }
 
   /** Number of stored docs, for contract tests. */

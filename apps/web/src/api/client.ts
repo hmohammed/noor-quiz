@@ -38,6 +38,8 @@ export interface ApiClient {
     body: AcceptConsentRequest;
     signal?: AbortSignal;
   }): Promise<MeResponse>;
+  /** Deletes the signed-in account. Resolves on 204 and never reads a body. */
+  deleteMe(init: { idToken: string; signal?: AbortSignal }): Promise<void>;
 }
 
 interface Schema<T> {
@@ -56,12 +58,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const doFetch: typeof globalThis.fetch =
     options.fetch ?? ((...args) => globalThis.fetch(...args));
 
-  async function request<T>(
-    method: 'GET' | 'PATCH' | 'POST',
+  async function send(
+    method: 'GET' | 'PATCH' | 'POST' | 'DELETE',
     path: string,
-    schema: Schema<T>,
     init: CallInit = {},
-  ): Promise<T> {
+  ) {
     const hasBody = init.body !== undefined;
     let res: Response;
     try {
@@ -81,6 +82,16 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     if (!res.ok) {
       throw new ApiError(`${method} ${path} failed with ${res.status}`, { status: res.status });
     }
+    return res;
+  }
+
+  async function request<T>(
+    method: 'GET' | 'PATCH' | 'POST',
+    path: string,
+    schema: Schema<T>,
+    init: CallInit = {},
+  ): Promise<T> {
+    const res = await send(method, path, init);
     let body: unknown;
     try {
       body = await res.json();
@@ -109,6 +120,9 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       request('PATCH', '/v1/me', MeResponse, { signal, headers: bearer(idToken), body }),
     acceptConsent: ({ idToken, body, signal }) =>
       request('POST', '/v1/me/consent', MeResponse, { signal, headers: bearer(idToken), body }),
+    deleteMe: async ({ idToken, signal }) => {
+      await send('DELETE', '/v1/me', { signal, headers: bearer(idToken) });
+    },
   };
 }
 

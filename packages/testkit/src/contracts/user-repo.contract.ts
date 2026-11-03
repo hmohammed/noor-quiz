@@ -20,12 +20,19 @@ import { FakeIdGenerator } from '../fake-id-generator';
 export interface UserRepoHarness {
   repo: UserRepo;
   counts(): Promise<{ users: number; identities: number }>;
+  /**
+   * Inserts one extra identity doc for an existing user. `createWithIdentity` refuses
+   * a second identity on an existing user id, so a ULID collision can never link two
+   * accounts. Delete tests use this to prove every identity with that userId is removed.
+   */
+  addIdentity(identity: Identity): Promise<void>;
 }
 
 const INVALID_SUBJECTS = ['', 'a/b', '..', 'a b', 'x'.repeat(129), 'ü'];
 
 const ULID_A = '01ARZ3NDEKTSV4RRFFQ69G5FAV' as UserId;
 const ULID_B = '01ARZ3NDEKTSV4RRFFQ69G5FAW' as UserId;
+const ULID_UNKNOWN = '01ARZ3NDEKTSV4RRFFQ69G5FB0' as UserId;
 const AT = '2026-01-01T00:00:00.000Z';
 
 function verified(subject: string, name: string | null = 'Alice'): VerifiedIdentity {
@@ -325,6 +332,99 @@ export function runUserRepoContract(name: string, makeImpl: () => Promise<UserRe
         const read = await repo.getById(ULID_A);
         read!.consent!.version = 'tampered-too';
         expect((await repo.getById(ULID_A))?.consent).toEqual(CONSENT);
+      });
+    });
+
+    describe('deleteUserAndIdentities', () => {
+      async function seeded() {
+        const harness = await setup();
+        const userA = userDoc(ULID_A);
+        const userB = userDoc(ULID_B);
+        await harness.repo.createWithIdentity(userA, identityDoc('uid-alice', ULID_A));
+        await harness.repo.createWithIdentity(userB, identityDoc('uid-bob', ULID_B));
+        await harness.addIdentity(identityDoc('alice2', ULID_A));
+        return { ...harness, userA, userB };
+      }
+
+      it('deletes the user and every identity, and leaves the other user', async () => {
+        const { repo, counts, userA, userB } = await seeded();
+        expect(await repo.getByIdentity({ provider: 'firebase', subject: 'alice2' })).toEqual(
+          userA,
+        );
+        expect(await counts()).toEqual({ users: 2, identities: 3 });
+
+        await expect(repo.deleteUserAndIdentities(ULID_A)).resolves.toBeUndefined();
+
+        expect(await repo.getById(ULID_A)).toBeNull();
+        expect(await repo.getByIdentity({ provider: 'firebase', subject: 'uid-alice' })).toBeNull();
+        expect(await repo.getByIdentity({ provider: 'firebase', subject: 'alice2' })).toBeNull();
+        expect(await counts()).toEqual({ users: 1, identities: 1 });
+        expect(await repo.getById(ULID_B)).toEqual(userB);
+        expect(await repo.getByIdentity({ provider: 'firebase', subject: 'uid-bob' })).toEqual(
+          userB,
+        );
+      });
+
+      it('deletes a user who set a profile and accepted consent, then the same subject starts over', async () => {
+        const { repo, counts, deps } = await setup();
+        const later = '2026-01-05T06:07:08.000Z';
+        const first = await getOrCreateUser(deps, verified('uid-alice', 'Alice'));
+        await repo.updateProfile(
+          first.id,
+          { displayName: 'Åsa', locale: 'sv', timezone: 'Europe/Stockholm' },
+          later,
+        );
+        await repo.recordConsent(
+          first.id,
+          { version: CURRENT_CONSENT_VERSION, acceptedAt: later },
+          later,
+        );
+
+        await repo.deleteUserAndIdentities(first.id);
+
+        const second = await getOrCreateUser(deps, verified('uid-alice', 'Alice'));
+        expect(second.id).not.toBe(first.id);
+        expect(second.displayName).toBe('Alice');
+        expect(second.locale).toBeNull();
+        expect(second.timezone).toBeNull();
+        expect(second.consent).toBeNull();
+        expect(await counts()).toEqual({ users: 1, identities: 1 });
+      });
+
+      it('resolves for an unknown ULID and on an empty store, and writes nothing', async () => {
+        const empty = await setup();
+        await expect(empty.repo.deleteUserAndIdentities(ULID_A)).resolves.toBeUndefined();
+        expect(await empty.counts()).toEqual({ users: 0, identities: 0 });
+
+        const { repo, counts, userB } = await seeded();
+        const before = await counts();
+        await expect(repo.deleteUserAndIdentities(ULID_UNKNOWN)).resolves.toBeUndefined();
+        expect(await counts()).toEqual(before);
+        expect(await repo.getById(ULID_B)).toEqual(userB);
+        expect(await repo.getByIdentity({ provider: 'firebase', subject: 'uid-bob' })).toEqual(
+          userB,
+        );
+      });
+
+      it('resolves when called twice, and the second call changes nothing', async () => {
+        const { repo, counts } = await seeded();
+        await repo.deleteUserAndIdentities(ULID_A);
+        const after = await counts();
+
+        await expect(repo.deleteUserAndIdentities(ULID_A)).resolves.toBeUndefined();
+
+        expect(after).toEqual({ users: 1, identities: 1 });
+        expect(await counts()).toEqual(after);
+      });
+
+      it.each(['uid-alice', ''])('rejects %j with VALIDATION and writes nothing', async (id) => {
+        const { repo, counts, userB } = await seeded();
+        await expectDomainError(repo.deleteUserAndIdentities(id as UserId), 'VALIDATION');
+        expect(await counts()).toEqual({ users: 2, identities: 3 });
+        expect(await repo.getById(ULID_B)).toEqual(userB);
+        expect(await repo.getByIdentity({ provider: 'firebase', subject: 'uid-bob' })).toEqual(
+          userB,
+        );
       });
     });
   });

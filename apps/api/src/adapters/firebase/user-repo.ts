@@ -196,4 +196,18 @@ export class FirestoreUserRepo implements UserRepo {
       return toUserDoc({ ...current, consent: stored, updatedAt });
     });
   }
+
+  async deleteUserAndIdentities(userId: UserId): Promise<void> {
+    const id = asUserId(userId);
+    // Unconverted refs: a corrupt doc must not throw INTERNAL and block deletion.
+    const userRef = this.#db.collection('users').doc(id);
+    const identities = this.#db.collection('identities').where('userId', '==', id);
+
+    await this.#db.runTransaction(async (tx) => {
+      const userSnap = await tx.get(userRef);
+      const identitySnap = await tx.get(identities);
+      if (userSnap.exists) tx.delete(userRef);
+      for (const doc of identitySnap.docs) tx.delete(doc.ref);
+    });
+  }
 }

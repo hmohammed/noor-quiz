@@ -5,7 +5,11 @@ import { InMemoryUserRepo } from './in-memory-user-repo';
 
 runUserRepoContract('InMemoryUserRepo', async () => {
   const repo = new InMemoryUserRepo();
-  return { repo, counts: async () => repo.counts() };
+  return {
+    repo,
+    counts: async () => repo.counts(),
+    addIdentity: (identity) => repo.addIdentity(identity),
+  };
 });
 
 describe('InMemoryUserRepo', () => {

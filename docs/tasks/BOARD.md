@@ -31,10 +31,10 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T010c](E01-identity-privacy.md#t010c) | Web: sign in with Google and see my name | E01 | T010b | sec | done | factory |
 | [T011](E01-identity-privacy.md#t011) | Edit my profile: display name, locale, timezone | E01 | T010 |  | done | factory |
 | [T012](E01-identity-privacy.md#t012) | Firestore rules baseline: deny every client write | E01 | T002 | sec | done | factory |
-| [T013](E01-identity-privacy.md#t013) | Consent at first sign-in and delete my account | E01 | T011 | sec | split |  |
+| [T013](E01-identity-privacy.md#t013) | Consent at first sign-in and delete my account | E01 | T011 | sec | done | factory |
 | [T013a](E01-identity-privacy.md#t013a) | Consent: record it and block protected endpoints without it | E01 | T011 | sec | done | factory |
 | [T013b](E01-identity-privacy.md#t013b) | Web: consent screen at first sign-in and a /privacy page | E01 | T013a | sec | done | factory |
-| [T013c](E01-identity-privacy.md#t013c) | Delete my account | E01 | T013a | sec | todo |  |
+| [T013c](E01-identity-privacy.md#t013c) | Delete my account | E01 | T013a | sec | done | factory |
 | [T020](E02-communities.md#t020) | Create a community and list mine | E02 | T013 | sec | todo |  |
 | [T021](E02-communities.md#t021) | Invite link and join | E02 | T020 | sec | todo |  |
 | [T022](E02-communities.md#t022) | Members list and role management | E02 | T021 | sec | todo |  |

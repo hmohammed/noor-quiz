@@ -43,5 +43,13 @@
   "profile.retry": "Try again",
   "profile.error.displayName": "Use letters and spaces only, 2–32 characters.",
   "profile.error.generic": "Could not save your profile. Please try again.",
-  "profile.error.load": "We couldn't load your profile. Please try again."
+  "profile.error.load": "We couldn't load your profile. Please try again.",
+  "profile.delete.title": "Delete my account",
+  "profile.delete.intro": "This removes your profile, language, timezone, privacy-consent record and sign-in link. Your Google account itself is not deleted.",
+  "profile.delete.start": "Delete my account",
+  "profile.delete.confirmPrompt": "This can't be undone. Your profile, language, timezone, privacy-consent record and sign-in link will be removed. Your Google account itself is not deleted.",
+  "profile.delete.confirm": "Delete my account",
+  "profile.delete.cancel": "Cancel",
+  "profile.delete.deleting": "Deleting…",
+  "profile.delete.error": "Could not delete your account. Please try again."
 }

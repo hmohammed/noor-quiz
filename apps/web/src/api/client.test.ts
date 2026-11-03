@@ -238,3 +238,44 @@ describe('apiClient.acceptConsent', () => {
     ).rejects.toBeInstanceOf(ApiError);
   });
 });
+
+describe('apiClient.deleteMe', () => {
+  it('sends DELETE with the bearer token, no body and no content-type, and resolves on 204', async () => {
+    const fetch = fakeFetch(new Response(null, { status: 204 }));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(client.deleteMe({ idToken: 'tok.en.value' })).resolves.toBeUndefined();
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe('http://api.test/v1/me');
+    expect(init?.method).toBe('DELETE');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(headers.get('accept')).toBe('application/json');
+    expect(headers.has('content-type')).toBe(false);
+    expect(init?.body).toBeUndefined();
+  });
+
+  it.each([401, 500])('throws ApiError with status %s', async (status) => {
+    const client = createApiClient({ fetch: fakeFetch(new Response(null, { status })) });
+    const err = await client.deleteMe({ idToken: 't' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(status);
+  });
+
+  it('throws ApiError when fetch itself rejects', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => {
+      throw new TypeError('network down');
+    });
+    await expect(createApiClient({ fetch }).deleteMe({ idToken: 't' })).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
+
+  it('passes the abort signal through', async () => {
+    const fetch = fakeFetch(new Response(null, { status: 204 }));
+    const controller = new AbortController();
+    await createApiClient({ fetch }).deleteMe({ idToken: 't', signal: controller.signal });
+    expect(fetch.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
+  });
+});
