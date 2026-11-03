@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { expect, test, type Request } from '@playwright/test';
 import {
-  acceptConsentViaApi,
+  acceptConsentOnScreen,
   signInAgainWithEmulator,
   signInWithEmulator,
 } from './helpers/sign-in';
@@ -64,10 +64,11 @@ test('delete my account, then the same Google account starts over', async ({ pag
 
   const email = `e2e-delete-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   await page.goto('/');
-  const me = await signInWithEmulator(page, { displayName: 'Delete E2E', email });
+  await signInWithEmulator(page, { displayName: 'Delete E2E', email });
   const old = seen.at(-1);
   expect(old, 'GET /v1/me was observed').toBeTruthy();
-  await acceptConsentViaApi(page, me);
+  expect(old?.required).toBe(true);
+  await acceptConsentOnScreen(page);
 
   await page.getByRole('link', { name: 'Profile' }).click();
   const name = page.getByLabel('Display name');
@@ -91,15 +92,16 @@ test('delete my account, then the same Google account starts over', async ({ pag
     page.getByRole('banner').getByRole('button', { name: 'Sign in with Google' }),
   ).toBeVisible();
 
-  const again = await signInAgainWithEmulator(page, { email });
+  await signInAgainWithEmulator(page, { email });
   const fresh = seen.at(-1);
   expect(fresh, 'GET /v1/me after signing in again was observed').toBeTruthy();
   expect(fresh?.userId).not.toBe(old?.userId);
   expect(fresh?.required).toBe(true);
   expect(fresh?.displayName).toBe('Delete E2E');
   expect(subjectHash(fresh?.authorization ?? '')).toBe(subjectHash(old?.authorization ?? ''));
+  await expect(page.getByRole('heading', { level: 1, name: 'Before you start' })).toBeVisible();
 
-  await acceptConsentViaApi(page, again);
+  await acceptConsentOnScreen(page);
   await page.getByRole('link', { name: 'Profile' }).click();
   await expect(page.getByLabel('Display name')).toHaveValue('Delete E2E');
 });
@@ -113,6 +115,7 @@ test('delete confirmation stays on screen in RTL and cancel sends nothing', asyn
   const email = `e2e-delete-rtl-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   await page.goto('/');
   await signInWithEmulator(page, { displayName: 'RTL E2E', email });
+  await acceptConsentOnScreen(page);
   await page.getByRole('link', { name: 'Profile' }).click();
   await expect(page.getByRole('button', { name: 'Delete my account' })).toBeVisible();
   await page.evaluate(() => {
