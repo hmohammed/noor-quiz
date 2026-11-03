@@ -7,6 +7,7 @@ import type {
 import type { Invite } from '../communities/invite';
 import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
+import type { CommunitySeason, SeasonId } from '../season/community-season';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
 
 /**
@@ -148,4 +149,27 @@ export interface InviteRepo {
     membership: Membership;
     created: boolean;
   }>;
+}
+
+/**
+ * `seasons/{seasonId}` (top-level, ULID id). No composite index: `list` is a
+ * single-field `tenantId` equality, and the use case sorts. State is not stored.
+ *
+ * `{ id, tenantId, name, kind, startDate, lengthDays, timezone, opensAtLocal,
+ * closesAtLocal, createdBy, createdAt, updatedAt, schemaVersion: 1 }`.
+ * On create, `updatedAt` equals `createdAt`. Timestamps are the UTC ISO strings the
+ * caller passes; implementations do not read a clock.
+ *
+ * `get` returns null when the document is missing or its `tenantId` differs.
+ * `create` uses `season.id` as the document id. An existing id is `CONFLICT`.
+ * A non-ULID id, a non-ULID `tenantId`, or `schemaVersion !== 1` is `VALIDATION`.
+ * `update` is a transaction. A missing document or a tenant mismatch is `NOT_FOUND`.
+ * A change to `createdBy`, `createdAt` or `schemaVersion` is `VALIDATION`.
+ */
+export interface SeasonRepo {
+  get(tenantId: TenantId, seasonId: SeasonId): Promise<CommunitySeason | null>;
+  /** Every season with this `tenantId`. Unsorted. */
+  list(tenantId: TenantId): Promise<CommunitySeason[]>;
+  create(season: CommunitySeason): Promise<CommunitySeason>;
+  update(season: CommunitySeason): Promise<CommunitySeason>;
 }

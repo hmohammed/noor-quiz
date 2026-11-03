@@ -52,6 +52,12 @@ describe('@noor/core', () => {
     'createInvite',
     'previewInvite',
     'acceptInvite',
+    'createSeason',
+    'listSeasons',
+    'updateSeason',
+    'suggestRamadanStart',
+    'asSeasonId',
+    'seasonRules',
   ])('exports %s', (name) => {
     expect(typeof (core as Record<string, unknown>)[name]).toBe('function');
   });
@@ -74,5 +80,10 @@ describe('@noor/core', () => {
     expect(core.INVITE_DEFAULT_MAX_USES).toBe(25);
     expect(core.INVITE_MIN_MAX_USES).toBe(1);
     expect(core.INVITE_MAX_MAX_USES).toBe(100);
+  });
+
+  it('exports the season constants', () => {
+    expect(core.SEASON_KINDS).toEqual(['ramadan', 'dhul_hijjah', 'muharram', 'weekly', 'custom']);
+    expect(core.SEASON_SCHEMA_VERSION).toBe(1);
   });
 });
