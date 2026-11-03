@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MeResponse, SUPPORTED_LOCALES, UpdateMeRequest } from './me';
+import { AcceptConsentRequest, MeResponse, SUPPORTED_LOCALES, UpdateMeRequest } from './me';
 
 const ULID = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 const GEEZ_32 = 'ሀ'.repeat(32);
@@ -52,11 +52,14 @@ const INVALID_TIMEZONES: unknown[] = [
 ];
 const INVALID_LOCALES: unknown[] = ['fr', 'EN', 'en-US', '', null];
 
+const CONSENT = { currentVersion: '2026-11-01', acceptedVersion: null, required: true };
+
 const me = (overrides: Record<string, unknown> = {}) => ({
   userId: ULID,
   displayName: null,
   locale: null,
   timezone: null,
+  consent: CONSENT,
   ...overrides,
 });
 
@@ -92,13 +95,30 @@ describe('MeResponse', () => {
     ['a 1-code-point name', me({ displayName: 'A' })],
     ['a 1-emoji name', me({ displayName: '😀' })],
     ['a 33-code-point name', me({ displayName: 'ሀ'.repeat(33) })],
-    ['a missing displayName', { userId: ULID, locale: null, timezone: null }],
-    ['a missing locale', { userId: ULID, displayName: null, timezone: null }],
-    ['a missing timezone', { userId: ULID, displayName: null, locale: null }],
+    ['a missing displayName', { userId: ULID, locale: null, timezone: null, consent: CONSENT }],
+    ['a missing locale', { userId: ULID, displayName: null, timezone: null, consent: CONSENT }],
+    ['a missing timezone', { userId: ULID, displayName: null, locale: null, consent: CONSENT }],
+    ['a missing consent', { userId: ULID, displayName: null, locale: null, timezone: null }],
+    ['an acceptedAt inside consent', me({ consent: { ...CONSENT, acceptedAt: '2026-01-01' } })],
+    ['a non-boolean required', me({ consent: { ...CONSENT, required: 'yes' } })],
+    [
+      'a missing acceptedVersion',
+      me({ consent: { currentVersion: '2026-11-01', required: true } }),
+    ],
     ['an unsupported locale', me({ locale: 'fr' })],
     ['an unknown timezone', me({ timezone: 'Mars/Olympus' })],
   ])('rejects %s', (_label, body) => {
     expect(MeResponse.safeParse(body).success).toBe(false);
+  });
+
+  it.each([
+    ['null', null],
+    ['the current version', '2026-11-01'],
+  ])('accepts acceptedVersion %s', (_label, acceptedVersion) => {
+    const body = me({
+      consent: { currentVersion: '2026-11-01', acceptedVersion, required: false },
+    });
+    expect(MeResponse.parse(body)).toEqual(body);
   });
 
   it.each([
@@ -107,6 +127,26 @@ describe('MeResponse', () => {
     ['email', me({ email: 'a@example.com' })],
   ])('throws on an extra %s key (strict)', (_label, body) => {
     expect(() => MeResponse.parse(body)).toThrow();
+  });
+});
+
+describe('AcceptConsentRequest', () => {
+  it.each([
+    ['a 1-char version', 'a'],
+    ['a 32-char version', 'v'.repeat(32)],
+  ])('accepts %s', (_label, version) => {
+    expect(AcceptConsentRequest.parse({ version })).toEqual({ version });
+  });
+
+  it.each([
+    ['an empty version', { version: '' }],
+    ['a 33-char version', { version: 'v'.repeat(33) }],
+    ['a number', { version: 42 }],
+    ['a missing version', {}],
+    ['an acceptedAt key', { version: 'a', acceptedAt: '2020-01-01T00:00:00.000Z' }],
+    ['a userId key', { version: 'a', userId: ULID }],
+  ])('rejects %s', (_label, body) => {
+    expect(AcceptConsentRequest.safeParse(body).success).toBe(false);
   });
 });
 

@@ -19,6 +19,7 @@ describe('InMemoryUserRepo', () => {
         displayName: 'Alice',
         locale: null,
         timezone: null,
+        consent: null,
         createdAt: at,
         updatedAt: at,
         schemaVersion: 1,

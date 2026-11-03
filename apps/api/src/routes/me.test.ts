@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CURRENT_CONSENT_VERSION,
   DomainError,
   isUlid,
+  type Consent,
   type Identity,
   type ProfilePatch,
   type User,
@@ -39,7 +41,16 @@ function setup(deps: TestDeps = makeTestDeps()) {
       },
       body: raw ? (body as string) : JSON.stringify(body),
     });
-  return { app, deps, getMe, patchMe };
+  const postConsent = (authorization: string | undefined, body: unknown, raw = false) =>
+    app.request('/v1/me/consent', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(authorization === undefined ? {} : { authorization }),
+      },
+      body: raw ? (body as string) : JSON.stringify(body),
+    });
+  return { app, deps, getMe, patchMe, postConsent };
 }
 
 async function expect400(res: Response): Promise<void> {
@@ -47,13 +58,45 @@ async function expect400(res: Response): Promise<void> {
   expect(ErrorResponse.parse(await res.json()).error.code).toBe('VALIDATION');
 }
 
-/** Signs a user in once (creating them) and returns their bearer header and stored user. */
-async function signedIn(deps: TestDeps, overrides: Partial<VerifiedIdentity> = {}) {
+async function expect403Consent(res: Response): Promise<void> {
+  expect(res.status).toBe(403);
+  expect(ErrorResponse.parse(await res.json()).error.code).toBe('CONSENT_REQUIRED');
+}
+
+const CONSENT_REQUIRED = {
+  currentVersion: CURRENT_CONSENT_VERSION,
+  acceptedVersion: null,
+  required: true,
+};
+const CONSENT_GIVEN = {
+  currentVersion: CURRENT_CONSENT_VERSION,
+  acceptedVersion: CURRENT_CONSENT_VERSION,
+  required: false,
+};
+
+/**
+ * Signs a user in once (creating them), accepts the current consent through
+ * `POST /v1/me/consent` unless `consent: false`, and returns their bearer header and
+ * stored user.
+ */
+async function signedIn(
+  deps: TestDeps,
+  overrides: Partial<VerifiedIdentity> = {},
+  { consent = true }: { consent?: boolean } = {},
+) {
   const token = deps.auth.issue(identity(overrides));
   const authorization = `Bearer ${token}`;
   const app = createApp({ deps, version: 'test-1' });
   const res = await app.request('/v1/me', { headers: { authorization } });
   const { userId } = MeResponse.parse(await res.json());
+  if (consent) {
+    const accepted = await app.request('/v1/me/consent', {
+      method: 'POST',
+      headers: { authorization, 'content-type': 'application/json' },
+      body: JSON.stringify({ version: CURRENT_CONSENT_VERSION }),
+    });
+    expect(accepted.status).toBe(200);
+  }
   const stored = (await deps.users.getById(userId as UserId))!;
   return { authorization, userId, stored };
 }
@@ -81,6 +124,15 @@ class LeakyUserRepo extends InMemoryUserRepo {
     return this.#leak(await super.updateProfile(userId, patch, updatedAt));
   }
 
+  override async getById(userId: UserId) {
+    const user = await super.getById(userId);
+    return user ? this.#leak(user) : null;
+  }
+
+  override async recordConsent(userId: UserId, consent: Consent, updatedAt: string) {
+    return this.#leak(await super.recordConsent(userId, consent, updatedAt));
+  }
+
   #leak(user: User): User {
     return { ...user, subject: SENTINEL_SUBJECT, email: SENTINEL_EMAIL } as User;
   }
@@ -103,6 +155,7 @@ describe('GET /v1/me', () => {
       displayName: 'Alice',
       locale: null,
       timezone: null,
+      consent: CONSENT_REQUIRED,
     });
   });
 
@@ -223,22 +276,39 @@ describe('GET /v1/me', () => {
     expect(deniedText).not.toContain(token);
   });
 
-  it('GET and PATCH return exactly userId, displayName, locale, timezone even if the repo leaks keys', async () => {
-    const { deps, getMe, patchMe } = setup(makeTestDeps({ users: new LeakyUserRepo() }));
+  it('GET, POST consent and PATCH return only the contract keys even if the repo leaks keys', async () => {
+    const { deps, getMe, patchMe, postConsent } = setup(
+      makeTestDeps({ users: new LeakyUserRepo() }),
+    );
     const token = deps.auth.issue(identity());
+    const authorization = `Bearer ${token}`;
 
-    const res = await getMe(`Bearer ${token}`);
-    const patched = await patchMe(`Bearer ${token}`, { displayName: 'Åsa' });
+    const res = await getMe(authorization);
+    deps.clock.advance({ hours: 7, minutes: 13 });
+    const accepted = await postConsent(authorization, { version: CURRENT_CONSENT_VERSION });
+    const patched = await patchMe(authorization, { displayName: 'Åsa' });
+    const { userId } = MeResponse.parse(await res.clone().json());
+    const acceptedAt = '2026-01-01T07:13:00.000Z';
+    expect((await deps.users.getById(userId as UserId))?.consent?.acceptedAt).toBe(acceptedAt);
 
-    for (const r of [res, patched]) {
+    for (const r of [res, accepted, patched]) {
       const text = await r.text();
       expect(r.status).toBe(200);
-      expect(Object.keys(JSON.parse(text)).sort()).toEqual([
+      const body = JSON.parse(text) as { consent: Record<string, unknown> };
+      expect(Object.keys(body).sort()).toEqual([
+        'consent',
         'displayName',
         'locale',
         'timezone',
         'userId',
       ]);
+      expect(Object.keys(body.consent).sort()).toEqual([
+        'acceptedVersion',
+        'currentVersion',
+        'required',
+      ]);
+      expect(text).not.toContain('acceptedAt');
+      expect(text).not.toContain(acceptedAt);
       expect(text).not.toContain(SENTINEL_SUBJECT);
       expect(text).not.toContain(SENTINEL_EMAIL);
     }
@@ -282,6 +352,7 @@ describe('PATCH /v1/me', () => {
         displayName,
         locale: null,
         timezone: null,
+        consent: CONSENT_GIVEN,
       });
       expect(MeResponse.parse(await (await getMe(authorization)).json()).displayName).toBe(
         displayName,
@@ -410,11 +481,199 @@ describe('PATCH /v1/me', () => {
       }
     }
     const { deps, patchMe } = setup(makeTestDeps({ users: new VanishingRepo() }));
-    const token = deps.auth.issue(identity());
+    const { authorization } = await signedIn(deps);
 
-    const res = await patchMe(`Bearer ${token}`, { displayName: 'Åsa' });
+    const res = await patchMe(authorization, { displayName: 'Åsa' });
 
     expect(res.status).toBe(404);
     expect(ErrorResponse.parse(await res.json()).error.code).toBe('NOT_FOUND');
+  });
+
+  describe('403 CONSENT_REQUIRED and nothing changed', () => {
+    it('for a new user who has not accepted', async () => {
+      const { deps, patchMe } = setup();
+      const { authorization, userId, stored } = await signedIn(deps, {}, { consent: false });
+
+      await expect403Consent(await patchMe(authorization, { displayName: 'Åsa' }));
+
+      expect(await deps.users.getById(userId as UserId)).toStrictEqual(stored);
+    });
+
+    it('for a user who accepted an older version', async () => {
+      const { deps, patchMe } = setup();
+      const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+      const at = '2025-01-01T00:00:00.000Z';
+      await deps.users.recordConsent(
+        userId as UserId,
+        { version: '2000-01-01', acceptedAt: at },
+        at,
+      );
+      const stored = await deps.users.getById(userId as UserId);
+
+      await expect403Consent(await patchMe(authorization, { displayName: 'Åsa' }));
+
+      expect(await deps.users.getById(userId as UserId)).toStrictEqual(stored);
+    });
+  });
+
+  it('returns 200 after POST /v1/me/consent for the same user', async () => {
+    const { deps, patchMe, postConsent } = setup();
+    const { authorization } = await signedIn(deps, {}, { consent: false });
+    await expect403Consent(await patchMe(authorization, { displayName: 'Åsa' }));
+
+    expect((await postConsent(authorization, { version: CURRENT_CONSENT_VERSION })).status).toBe(
+      200,
+    );
+    const res = await patchMe(authorization, { displayName: 'Åsa' });
+
+    expect(res.status).toBe(200);
+    expect(MeResponse.parse(await res.json()).displayName).toBe('Åsa');
+  });
+});
+
+describe('POST /v1/me/consent', () => {
+  it('records the current version and a later GET reports required: false', async () => {
+    const { deps, getMe, postConsent } = setup();
+    const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+    deps.clock.advance({ hours: 3 });
+
+    const res = await postConsent(authorization, { version: CURRENT_CONSENT_VERSION });
+
+    expect(res.status).toBe(200);
+    expect(MeResponse.parse(await res.json())).toEqual({
+      userId,
+      displayName: 'Alice',
+      locale: null,
+      timezone: null,
+      consent: CONSENT_GIVEN,
+    });
+    expect(MeResponse.parse(await (await getMe(authorization)).json()).consent).toEqual(
+      CONSENT_GIVEN,
+    );
+    expect((await deps.users.getById(userId as UserId))?.consent).toStrictEqual({
+      version: CURRENT_CONSENT_VERSION,
+      acceptedAt: '2026-01-01T03:00:00.000Z',
+    });
+  });
+
+  it('a second accept returns 200 and keeps the first acceptedAt', async () => {
+    const { deps, postConsent } = setup();
+    const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+    await postConsent(authorization, { version: CURRENT_CONSENT_VERSION });
+    deps.clock.advance({ hours: 1 });
+
+    const res = await postConsent(authorization, { version: CURRENT_CONSENT_VERSION });
+
+    expect(res.status).toBe(200);
+    expect(MeResponse.parse(await res.json()).consent).toEqual(CONSENT_GIVEN);
+    expect((await deps.users.getById(userId as UserId))?.consent?.acceptedAt).toBe(
+      '2026-01-01T00:00:00.000Z',
+    );
+  });
+
+  describe('401 UNAUTHENTICATED and nothing created or changed', () => {
+    it('no Authorization header', async () => {
+      const { deps, postConsent } = setup();
+
+      await expect401(await postConsent(undefined, { version: CURRENT_CONSENT_VERSION }));
+
+      expect(deps.auth.verifyCalls).toBe(0);
+      expect(deps.users.counts()).toEqual({ users: 0, identities: 0 });
+    });
+
+    it('a token the verifier rejects', async () => {
+      const { deps, postConsent } = setup();
+      const { authorization, userId, stored } = await signedIn(deps, {}, { consent: false });
+      deps.auth.reject(authorization.slice('Bearer '.length));
+
+      await expect401(await postConsent(authorization, { version: CURRENT_CONSENT_VERSION }));
+
+      expect(await deps.users.getById(userId as UserId)).toStrictEqual(stored);
+      expect(deps.users.counts()).toEqual({ users: 1, identities: 1 });
+    });
+  });
+
+  describe('400 VALIDATION and consent stays null', () => {
+    const cases: [string, unknown, boolean?][] = [
+      ['a non-JSON body', '{not json', true],
+      ['a JSON array', [CURRENT_CONSENT_VERSION]],
+      ['an empty object', {}],
+      ['an empty version', { version: '' }],
+      ['a 33-char version', { version: 'x'.repeat(33) }],
+      ['a number version', { version: 42 }],
+      [
+        'an acceptedAt key',
+        { version: CURRENT_CONSENT_VERSION, acceptedAt: '2020-01-01T00:00:00.000Z' },
+      ],
+      ['a userId key', { version: CURRENT_CONSENT_VERSION, userId: '01ARZ3NDEKTSV4RRFFQ69G5FAW' }],
+    ];
+
+    it.each(cases)('%s', async (_label, body, raw) => {
+      const { deps, postConsent } = setup();
+      const { authorization, userId, stored } = await signedIn(deps, {}, { consent: false });
+      deps.clock.advance({ hours: 1 });
+
+      await expect400(await postConsent(authorization, body, raw ?? false));
+
+      const after = await deps.users.getById(userId as UserId);
+      expect(after).toStrictEqual(stored);
+      expect(after?.consent).toBeNull();
+    });
+
+    it('a body over 4 KB is rejected before the token is verified', async () => {
+      const { deps, postConsent } = setup();
+      const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+      const before = deps.auth.verifyCalls;
+
+      await expect400(
+        await postConsent(authorization, {
+          version: CURRENT_CONSENT_VERSION,
+          pad: 'x'.repeat(5000),
+        }),
+      );
+
+      expect(deps.auth.verifyCalls).toBe(before);
+      expect((await deps.users.getById(userId as UserId))?.consent).toBeNull();
+    });
+  });
+
+  it('returns 409 CONFLICT for a well-formed version that is not current', async () => {
+    const { deps, postConsent } = setup();
+    const { authorization, userId } = await signedIn(deps, {}, { consent: false });
+
+    const res = await postConsent(authorization, { version: '2000-01-01' });
+
+    expect(res.status).toBe(409);
+    expect(ErrorResponse.parse(await res.json()).error.code).toBe('CONFLICT');
+    expect((await deps.users.getById(userId as UserId))?.consent).toBeNull();
+  });
+
+  it("user A's accept changes only user A; user B is unchanged", async () => {
+    const { deps, postConsent } = setup();
+    const a = await signedIn(deps, { subject: 'uid-alice', name: 'Alice' }, { consent: false });
+    const b = await signedIn(deps, { subject: 'uid-bob', name: 'Bob' }, { consent: false });
+
+    const res = await postConsent(a.authorization, { version: CURRENT_CONSENT_VERSION });
+
+    expect(res.status).toBe(200);
+    expect(MeResponse.parse(await res.json()).userId).toBe(a.userId);
+    expect((await deps.users.getById(a.userId as UserId))?.consent?.version).toBe(
+      CURRENT_CONSENT_VERSION,
+    );
+    expect(JSON.stringify(await deps.users.getById(b.userId as UserId))).toBe(
+      JSON.stringify(b.stored),
+    );
+  });
+
+  it.each(['GET', 'DELETE'])('returns 404 for %s /v1/me/consent', async (method) => {
+    const { deps, app } = setup();
+    const token = deps.auth.issue(identity());
+
+    const res = await app.request('/v1/me/consent', {
+      method,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.status).toBe(404);
   });
 });

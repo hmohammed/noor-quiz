@@ -6,6 +6,8 @@ export interface RequestUser {
   displayName: string | null;
   locale: Locale | null;
   timezone: TimeZone | null;
+  /** The privacy terms version the user accepted, or null. Never `acceptedAt`. */
+  consentVersion: string | null;
 }
 
 /** Hono variables. `deps` is set for every request; `user` only after `requireUser()`. */

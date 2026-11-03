@@ -4,7 +4,14 @@ import type { Clock } from '../ports/clock';
 import type { IdGenerator } from '../ports/id-generator';
 import type { UserRepo } from '../ports/repos';
 import { instantFromIso, toIso } from '../time/instant';
-import { identityId, type Identity, type User, type VerifiedIdentity } from '../users/user';
+import { CURRENT_CONSENT_VERSION, type Consent } from '../users/consent';
+import {
+  identityId,
+  type Identity,
+  type User,
+  type UserId,
+  type VerifiedIdentity,
+} from '../users/user';
 import { getOrCreateUser } from './get-or-create-user';
 
 // Core cannot import testkit (workspace cycle), so these are small inline stubs.
@@ -41,6 +48,11 @@ function mapRepo() {
     updateProfile: vi.fn(async () => {
       throw new Error('not used here');
     }),
+    recordConsent: vi.fn(async (id: UserId, consent: Consent, updatedAt: string) => {
+      const next = { ...users.get(id)!, consent, updatedAt };
+      users.set(id, next);
+      return next;
+    }),
   } satisfies UserRepo;
   return { repo, users, identities };
 }
@@ -70,6 +82,7 @@ describe('getOrCreateUser', () => {
       displayName: 'Alice',
       locale: null,
       timezone: null,
+      consent: null,
       createdAt: iso,
       updatedAt: iso,
       schemaVersion: 1,
@@ -106,6 +119,25 @@ describe('getOrCreateUser', () => {
     expect(repo.createWithIdentity).not.toHaveBeenCalled();
   });
 
+  it('a later sign-in returns the stored consent unchanged', async () => {
+    const { repo } = mapRepo();
+    const first = await getOrCreateUser(
+      { clock: fixedClock, ids: sequenceIds(ULID_A), users: repo },
+      input,
+    );
+    const consent = { version: CURRENT_CONSENT_VERSION, acceptedAt: toIso(NOW) };
+    await repo.recordConsent(first.id, consent, toIso(NOW));
+
+    const later: Clock = { now: () => instantFromIso('2026-05-01T00:00:00Z') };
+    const again = await getOrCreateUser(
+      { clock: later, ids: sequenceIds(ULID_B), users: repo },
+      input,
+    );
+
+    expect(first.consent).toBeNull();
+    expect(again.consent).toStrictEqual(consent);
+  });
+
   it('returns the winner when createWithIdentity reports another user (lost race)', async () => {
     const { repo } = mapRepo();
     const winner: User = {
@@ -113,6 +145,7 @@ describe('getOrCreateUser', () => {
       displayName: 'Winner',
       locale: null,
       timezone: null,
+      consent: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       schemaVersion: 1,

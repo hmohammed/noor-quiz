@@ -1,12 +1,15 @@
 import {
   asUserId,
+  CONSENT_VERSION_MAX,
   DomainError,
   identityId,
   instantFromIso,
   isDomainError,
+  isValidConsent,
   SUPPORTED_LOCALES,
   ULID_PATTERN,
   USER_SCHEMA_VERSION,
+  type Consent,
   type Identity,
   type IdentityKey,
   type ProfilePatch,
@@ -35,12 +38,17 @@ const userId = z
   .regex(ULID_PATTERN)
   .transform((s) => s as UserId);
 
-// `locale` and `timezone` arrived in T011 without a schema bump: missing keys read as null.
+// `locale` and `timezone` arrived in T011 and `consent` in T013a, all without a schema
+// bump: missing keys read as null.
 const UserDoc = z.strictObject({
   id: userId,
   displayName: z.string().nullable(),
   locale: z.enum(SUPPORTED_LOCALES).nullable().default(null),
   timezone: z.string().nullable().default(null),
+  consent: z
+    .strictObject({ version: z.string().min(1).max(CONSENT_VERSION_MAX), acceptedAt: isoString })
+    .nullable()
+    .default(null),
   createdAt: isoString,
   updatedAt: isoString,
   schemaVersion: z.literal(USER_SCHEMA_VERSION),
@@ -63,6 +71,7 @@ function toUserDoc(u: User): User {
     displayName: u.displayName,
     locale: u.locale,
     timezone: u.timezone,
+    consent: u.consent && { version: u.consent.version, acceptedAt: u.consent.acceptedAt },
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
     schemaVersion: u.schemaVersion,
@@ -170,6 +179,21 @@ export class FirestoreUserRepo implements UserRepo {
       if (!current) throw new DomainError('NOT_FOUND', { reason: 'user-not-found' });
       tx.update(ref, updates);
       return toUserDoc({ ...current, ...updates });
+    });
+  }
+
+  async recordConsent(id: UserId, consent: Consent, updatedAt: string): Promise<User> {
+    const ref = this.#users.doc(asUserId(id));
+    if (!isValidConsent(consent))
+      throw new DomainError('VALIDATION', { reason: 'invalid-consent' });
+    // Named keys only, so nothing else on the consent object can reach the doc.
+    const stored: Consent = { version: consent.version, acceptedAt: consent.acceptedAt };
+
+    return this.#db.runTransaction(async (tx) => {
+      const current = (await tx.get(ref)).data();
+      if (!current) throw new DomainError('NOT_FOUND', { reason: 'user-not-found' });
+      tx.update(ref, { consent: stored, updatedAt });
+      return toUserDoc({ ...current, consent: stored, updatedAt });
     });
   }
 }

@@ -30,6 +30,9 @@ describe('@noor/core', () => {
     'isProfileTimeZone',
     'isSupportedLocale',
     'updateProfile',
+    'hasCurrentConsent',
+    'isValidConsent',
+    'acceptConsent',
   ])('exports %s', (name) => {
     expect(typeof (core as Record<string, unknown>)[name]).toBe('function');
   });
