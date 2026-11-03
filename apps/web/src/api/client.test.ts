@@ -186,3 +186,55 @@ describe('apiClient.updateMe', () => {
     );
   });
 });
+
+describe('apiClient.acceptConsent', () => {
+  const accepted = () =>
+    me({
+      consent: { currentVersion: '2026-11-01', acceptedVersion: '2026-11-01', required: false },
+    });
+
+  it('sends POST /v1/me/consent with the bearer token and { version } and returns the parsed body', async () => {
+    const fetch = fakeFetch(json(accepted()));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(
+      client.acceptConsent({ idToken: 'tok.en.value', body: { version: '2026-11-01' } }),
+    ).resolves.toEqual(accepted());
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe('http://api.test/v1/me/consent');
+    expect(init?.method).toBe('POST');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(headers.get('content-type')).toBe('application/json');
+    expect(headers.get('accept')).toBe('application/json');
+    expect(JSON.parse(String(init?.body))).toEqual({ version: '2026-11-01' });
+  });
+
+  it.each([409, 401])('throws ApiError with status %i on a %i response', async (status) => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ error: { code: 'X' } }, status)),
+    });
+    const err = await client
+      .acceptConsent({ idToken: 't', body: { version: '2026-11-01' } })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(status);
+  });
+
+  it('throws ApiError when a 200 body leaks acceptedAt inside consent', async () => {
+    const leaked = me({
+      consent: {
+        currentVersion: '2026-11-01',
+        acceptedVersion: '2026-11-01',
+        required: false,
+        acceptedAt: '2026-11-03T09:00:00.000Z',
+      },
+    });
+    const client = createApiClient({ fetch: fakeFetch(json(leaked)) });
+    await expect(
+      client.acceptConsent({ idToken: 't', body: { version: '2026-11-01' } }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+});
