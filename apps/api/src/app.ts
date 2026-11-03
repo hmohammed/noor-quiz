@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Deps } from '@noor/core';
 import type { AppEnv } from './app-env';
 import { installErrorHandling } from './errors';
+import { communitiesRoutes } from './routes/communities';
 import { healthRoutes } from './routes/health';
 import { meRoutes } from './routes/me';
 
@@ -25,5 +26,6 @@ export function createApp(root: AppRootInput): Hono<AppEnv> {
   });
   app.route('/', healthRoutes(root.version));
   app.route('/', meRoutes());
+  app.route('/', communitiesRoutes());
   return app;
 }

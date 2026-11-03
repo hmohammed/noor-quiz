@@ -8,7 +8,13 @@ import {
   useState,
 } from 'react';
 import type { ReactNode } from 'react';
-import type { MeResponse, UpdateMeRequestInput } from '@noor/contracts';
+import type {
+  CommunityResponse,
+  CreateCommunityRequestInput,
+  MeResponse,
+  MyCommunitiesResponse,
+  UpdateMeRequestInput,
+} from '@noor/contracts';
 import { ApiError, apiClient } from '../../api/client';
 import {
   SessionError,
@@ -41,6 +47,10 @@ export interface Session {
   acceptConsent(): Promise<MeResponse>;
   /** Deletes the account, then signs out. A failed delete leaves the session signed in. */
   deleteAccount(): Promise<void>;
+  /** Creates a community. Does not store the community list on the session. */
+  createCommunity(body: CreateCommunityRequestInput): Promise<CommunityResponse>;
+  /** Loads the signed-in user's communities. Does not store them on the session. */
+  listMyCommunities(): Promise<MyCommunitiesResponse>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -194,6 +204,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [applyTimezoneDefault]);
 
+  const withToken = useCallback(
+    async <T,>(run: (idToken: string, signal: AbortSignal) => Promise<T>) => {
+      const current = generation.current;
+      const idToken = await getIdToken();
+      if (current !== generation.current) throw new ApiError('Not signed in', { status: 401 });
+      if (idToken === null) throw new ApiError('Not signed in', { status: 401 });
+      let controller = pending.current;
+      if (!controller || controller.signal.aborted) {
+        controller = new AbortController();
+        pending.current = controller;
+      }
+      return run(idToken, controller.signal);
+    },
+    [],
+  );
+
+  const createCommunity = useCallback(
+    (body: CreateCommunityRequestInput) =>
+      withToken((idToken, signal) => apiClient.createCommunity({ idToken, body, signal })),
+    [withToken],
+  );
+
+  const listMyCommunities = useCallback(
+    () => withToken((idToken, signal) => apiClient.listMyCommunities({ idToken, signal })),
+    [withToken],
+  );
+
   const deleteAccount = useCallback(async () => {
     cancelPending();
     const idToken = await getIdToken();
@@ -208,8 +245,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [cancelPending]);
 
   const value = useMemo(
-    () => ({ state, signIn, signOut, updateMe, acceptConsent, deleteAccount }),
-    [state, signIn, signOut, updateMe, acceptConsent, deleteAccount],
+    () => ({
+      state,
+      signIn,
+      signOut,
+      updateMe,
+      acceptConsent,
+      deleteAccount,
+      createCommunity,
+      listMyCommunities,
+    }),
+    [
+      state,
+      signIn,
+      signOut,
+      updateMe,
+      acceptConsent,
+      deleteAccount,
+      createCommunity,
+      listMyCommunities,
+    ],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

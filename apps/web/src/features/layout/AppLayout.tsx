@@ -14,6 +14,11 @@ function SiteNav() {
         {t('nav.home')}
       </Link>
       {state.kind === 'signed-in' && !state.me.consent.required && (
+        <Link to="/communities" className="site-nav__link">
+          {t('nav.communities')}
+        </Link>
+      )}
+      {state.kind === 'signed-in' && !state.me.consent.required && (
         <Link to="/profile" className="site-nav__link">
           {t('nav.profile')}
         </Link>

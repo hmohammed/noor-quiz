@@ -2,6 +2,10 @@ import type { Deps } from '@noor/core';
 import { getAdminAuth } from './adapters/firebase/auth';
 import { FirebaseAuthVerifier } from './adapters/firebase/auth-verifier';
 import { getAdminFirestore } from './adapters/firebase/firestore';
+import {
+  FirestoreCommunityRepo,
+  FirestoreMembershipRepo,
+} from './adapters/firebase/community-repo';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
 import { UlidIdGenerator } from './adapters/system/ulid-id-generator';
@@ -24,11 +28,14 @@ export function createComposition(
 ): AppRoot {
   const config = loadConfig(env);
   const clock = new SystemClock();
+  const db = getAdminFirestore();
   const deps: Deps = {
     auth: new FirebaseAuthVerifier(getAdminAuth()),
     clock,
     ids: new UlidIdGenerator(clock),
-    users: new FirestoreUserRepo(getAdminFirestore()),
+    users: new FirestoreUserRepo(db),
+    communities: new FirestoreCommunityRepo(db),
+    memberships: new FirestoreMembershipRepo(db),
   };
   return { config, deps, version: opts.version };
 }
