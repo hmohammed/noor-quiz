@@ -256,13 +256,18 @@ Skills: `vertical-slice`, `i18n-rtl`
 
 **Acceptance criteria**
 
-- [ ] A new user sees the consent screen after sign-in. After agreeing they reach the app, and a reload does not show the screen again (e2e).
-- [ ] `/privacy` is reachable signed out and while consent is pending (view test and e2e).
-- [ ] View tests cover the loading, error and outdated-terms states, and every string is an i18n key.
+- [x] A new user sees the consent screen after sign-in. After agreeing they reach the app, and a reload does not show the screen again (e2e).
+- [x] `/privacy` is reachable signed out and while consent is pending (view test and e2e).
+- [x] View tests cover the loading, error and outdated-terms states, and every string is an i18n key.
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- `useSession().acceptConsent()` posts `me.consent.currentVersion` and replaces `me`. On a 409 it reloads `/v1/me` and throws `ConsentOutdatedError`. The gate (`features/consent/`) is UX only; the API's `requireConsent()` stays the enforcement.
+- The browser-timezone default runs once on first load (skipped while consent is required) and once after a successful accept, through one `applyTimezoneDefault` helper in `session-context.tsx`.
+- Real policy text goes in `en.json` under `privacy.*`; add or reorder sections in `features/privacy/policy.ts` (`PRIVACY_SECTIONS`). `/privacy` is `PRIVACY_PATH` and is exempt from the gate.
+- T080: the RTL e2e check in `e2e/consent.spec.ts` forces `document.documentElement.dir = 'rtl'`. Replace it with the real `ar` locale switch, and translate `consent.*`, `privacy.*` and `nav.privacy`.
+- T013c: after deleting an account and signing in again, the API creates a new user with `consent.required: true`, so e2e should expect the gate (use `acceptConsentOnScreen(page)` from `e2e/helpers/sign-in.ts`).
+- e2e helpers no longer read the `authorization` header; `acceptConsentViaApi` is gone.
 
 ## T013c
 
