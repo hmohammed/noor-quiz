@@ -1,5 +1,5 @@
 import { expect, test, type Request } from '@playwright/test';
-import { acceptConsentViaApi, signInWithEmulator } from './helpers/sign-in';
+import { acceptConsentOnScreen, signInWithEmulator } from './helpers/sign-in';
 
 const isPatchMe = (req: Request) =>
   new URL(req.url()).pathname === '/v1/me' && req.method() === 'PATCH';
@@ -7,7 +7,7 @@ const isPatchMe = (req: Request) =>
 test.describe('profile', () => {
   test.use({ timezoneId: 'Africa/Addis_Ababa' });
 
-  test('first sign-in sends the browser timezone once and the profile shows it', async ({
+  test('first sign-in sends the browser timezone once, after consent, and the profile shows it', async ({
     page,
   }) => {
     const patches: Request[] = [];
@@ -16,13 +16,16 @@ test.describe('profile', () => {
     });
 
     await page.goto('/');
-    const me = await signInWithEmulator(page, {
+    await signInWithEmulator(page, {
       displayName: 'Tz E2E',
       email: `e2e-tz-${Date.now()}@example.com`,
     });
     // No PATCH fires while consent is required; the default runs after it is accepted.
+    await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible();
+    expect(patches).toHaveLength(0);
+
     const patched = page.waitForResponse((res) => isPatchMe(res.request()));
-    await acceptConsentViaApi(page, me);
+    await acceptConsentOnScreen(page);
     expect((await patched).status()).toBe(200);
     expect(patches).toHaveLength(1);
     expect(patches[0]?.postDataJSON()).toEqual({ timezone: 'Africa/Addis_Ababa' });
@@ -34,11 +37,11 @@ test.describe('profile', () => {
 
   test('change my name to ሀሰን and see it in the header, also after reload', async ({ page }) => {
     await page.goto('/');
-    const me = await signInWithEmulator(page, {
+    await signInWithEmulator(page, {
       displayName: 'Name E2E',
       email: `e2e-name-${Date.now()}@example.com`,
     });
-    await acceptConsentViaApi(page, me);
+    await acceptConsentOnScreen(page);
     await expect(page.getByTestId('auth-name')).toHaveText('Name E2E');
 
     await page.getByRole('link', { name: 'Profile' }).click();
@@ -67,6 +70,7 @@ test.describe('profile', () => {
       displayName: 'First E2E',
       email: `e2e-first-${Date.now()}@example.com`,
     });
+    await acceptConsentOnScreen(page);
     await page.getByRole('link', { name: 'Profile' }).click();
     await page.getByLabel('Display name').fill('Unsaved Draft');
 
@@ -77,6 +81,7 @@ test.describe('profile', () => {
       displayName: 'Second E2E',
       email: `e2e-second-${Date.now()}@example.com`,
     });
+    await acceptConsentOnScreen(page);
     await expect(page.getByTestId('auth-name')).toHaveText('Second E2E');
     await expect(page.getByLabel('Display name')).toHaveValue('Second E2E');
     await expect(page.getByText('Profile saved.')).toHaveCount(0);
