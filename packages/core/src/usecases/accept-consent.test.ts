@@ -123,7 +123,10 @@ describe('acceptConsent', () => {
   ])('throws CONFLICT for %s and changes nothing', async (_label, version) => {
     const { deps, repo, stored, users } = seeded();
 
-    const err = await expectDomainError(acceptConsent(deps, { userId: ULID_A, version }), 'CONFLICT');
+    const err = await expectDomainError(
+      acceptConsent(deps, { userId: ULID_A, version }),
+      'CONFLICT',
+    );
 
     expect(err.details).toEqual({ reason: 'outdated-consent-version' });
     expect(repo.recordConsent).not.toHaveBeenCalled();

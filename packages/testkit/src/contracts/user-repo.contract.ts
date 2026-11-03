@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CURRENT_CONSENT_VERSION,
   getOrCreateUser,
   identityId,
   isDomainError,
   isUlid,
   USER_SCHEMA_VERSION,
+  type Consent,
   type DomainErrorCode,
   type Identity,
   type User,
@@ -36,6 +38,7 @@ function userDoc(id: UserId): User {
     displayName: 'Someone',
     locale: null,
     timezone: null,
+    consent: null,
     createdAt: AT,
     updatedAt: AT,
     schemaVersion: 1,
@@ -83,6 +86,7 @@ export function runUserRepoContract(name: string, makeImpl: () => Promise<UserRe
       const user = await getOrCreateUser(deps, verified('uid-alice'));
 
       expect(isUlid(user.id)).toBe(true);
+      expect(user.consent).toBeNull();
       expect(await counts()).toEqual({ users: 1, identities: 1 });
       expect(await repo.getById(user.id)).toEqual(user);
       expect(await repo.getByIdentity({ provider: 'firebase', subject: 'uid-alice' })).toEqual(
@@ -241,6 +245,86 @@ export function runUserRepoContract(name: string, makeImpl: () => Promise<UserRe
           repo.updateProfile('uid-alice' as UserId, { locale: 'en' }, LATER),
           'VALIDATION',
         );
+      });
+    });
+
+    describe('recordConsent', () => {
+      const LATER = '2026-01-05T06:07:08.000Z';
+      const CONSENT: Consent = { version: CURRENT_CONSENT_VERSION, acceptedAt: LATER };
+
+      async function seeded() {
+        const harness = await setup();
+        await harness.repo.createWithIdentity(userDoc(ULID_A), identityDoc('uid-alice', ULID_A));
+        await harness.repo.createWithIdentity(userDoc(ULID_B), identityDoc('uid-bob', ULID_B));
+        return harness;
+      }
+
+      it('writes only consent and updatedAt and returns the stored user', async () => {
+        const { repo, counts } = await seeded();
+
+        const result = await repo.recordConsent(ULID_A, CONSENT, LATER);
+
+        const expected: User = { ...userDoc(ULID_A), consent: CONSENT, updatedAt: LATER };
+        expect(result).toEqual(expected);
+        expect(await repo.getById(ULID_A)).toEqual(expected);
+        expect(await repo.getById(ULID_B)).toEqual(userDoc(ULID_B));
+        expect(await counts()).toEqual({ users: 2, identities: 2 });
+      });
+
+      it('keeps the profile fields set earlier', async () => {
+        const { repo } = await seeded();
+        await repo.updateProfile(
+          ULID_A,
+          { displayName: 'Åsa', locale: 'sv', timezone: 'Europe/Stockholm' },
+          AT,
+        );
+
+        const result = await repo.recordConsent(ULID_A, CONSENT, LATER);
+
+        expect(result).toEqual({
+          ...userDoc(ULID_A),
+          displayName: 'Åsa',
+          locale: 'sv',
+          timezone: 'Europe/Stockholm',
+          consent: CONSENT,
+          createdAt: AT,
+          updatedAt: LATER,
+        });
+        expect(await repo.getById(ULID_A)).toEqual(result);
+      });
+
+      it('throws NOT_FOUND for an unknown ULID and writes nothing', async () => {
+        const { repo, counts } = await setup();
+        await expectDomainError(repo.recordConsent(ULID_A, CONSENT, LATER), 'NOT_FOUND');
+        expect(await counts()).toEqual({ users: 0, identities: 0 });
+        expect(await repo.getById(ULID_A)).toBeNull();
+      });
+
+      it('throws VALIDATION for a non-ULID id', async () => {
+        const { repo } = await setup();
+        await expectDomainError(
+          repo.recordConsent('uid-alice' as UserId, CONSENT, LATER),
+          'VALIDATION',
+        );
+      });
+
+      it.each([
+        ['an empty version', { version: '', acceptedAt: LATER }],
+        ['a 33-char version', { version: 'v'.repeat(33), acceptedAt: LATER }],
+        ['a non-ISO acceptedAt', { version: CURRENT_CONSENT_VERSION, acceptedAt: 'yesterday' }],
+      ])('throws VALIDATION for %s and writes nothing', async (_label, consent) => {
+        const { repo } = await seeded();
+        await expectDomainError(repo.recordConsent(ULID_A, consent, LATER), 'VALIDATION');
+        expect(await repo.getById(ULID_A)).toEqual(userDoc(ULID_A));
+      });
+
+      it('returns copies, not the stored consent', async () => {
+        const { repo } = await seeded();
+        const result = await repo.recordConsent(ULID_A, CONSENT, LATER);
+        result.consent!.version = 'tampered';
+        const read = await repo.getById(ULID_A);
+        read!.consent!.version = 'tampered-too';
+        expect((await repo.getById(ULID_A))?.consent).toEqual(CONSENT);
       });
     });
   });

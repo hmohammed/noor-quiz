@@ -1,7 +1,13 @@
 import { deleteApp, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { getOrCreateUser, isDomainError, type DomainErrorCode, type UserId } from '@noor/core';
+import {
+  CURRENT_CONSENT_VERSION,
+  getOrCreateUser,
+  isDomainError,
+  type DomainErrorCode,
+  type UserId,
+} from '@noor/core';
 import { FakeClock, FakeIdGenerator, runUserRepoContract } from '@noor/testkit';
 import { FirestoreUserRepo } from './user-repo';
 
@@ -85,6 +91,7 @@ describe('FirestoreUserRepo (emulator only)', () => {
       displayName: 'Alice',
       locale: null,
       timezone: null,
+      consent: null,
       createdAt: AT,
       updatedAt: AT,
       schemaVersion: 1,
@@ -127,6 +134,7 @@ describe('FirestoreUserRepo (emulator only)', () => {
           displayName: null,
           locale: null,
           timezone: null,
+          consent: null,
           createdAt: AT,
           updatedAt: AT,
           schemaVersion: 1,
@@ -150,6 +158,8 @@ describe('FirestoreUserRepo (emulator only)', () => {
   it.each([
     ['schemaVersion 2', { schemaVersion: 2 }],
     ['a missing createdAt', { createdAt: undefined }],
+    ['an extra key in consent', { consent: { version: 'v', acceptedAt: AT, extra: 1 } }],
+    ['a string consent', { consent: 'yes' }],
   ])('rejects a users doc with %s as INTERNAL', async (_label, patch) => {
     const doc: Record<string, unknown> = {
       id: ULID,
@@ -175,7 +185,12 @@ describe('FirestoreUserRepo (emulator only)', () => {
     };
     await db.collection('users').doc(ULID).set(legacy);
 
-    expect(await repo.getById(ULID)).toStrictEqual({ ...legacy, locale: null, timezone: null });
+    expect(await repo.getById(ULID)).toStrictEqual({
+      ...legacy,
+      locale: null,
+      timezone: null,
+      consent: null,
+    });
 
     const later = '2026-02-01T00:00:00.000Z';
     const updated = await repo.updateProfile(ULID, { timezone: 'Africa/Addis_Ababa' }, later);
@@ -184,10 +199,36 @@ describe('FirestoreUserRepo (emulator only)', () => {
       ...legacy,
       locale: null,
       timezone: 'Africa/Addis_Ababa',
+      consent: null,
       updatedAt: later,
     });
     expect(await repo.getById(ULID)).toStrictEqual(updated);
     const raw = (await db.collection('users').doc(ULID).get()).data();
     expect(raw).toStrictEqual({ ...legacy, timezone: 'Africa/Addis_Ababa', updatedAt: later });
+  });
+
+  it('records consent on a doc written before T013a and adds only consent and updatedAt', async () => {
+    const legacy = {
+      id: ULID,
+      displayName: 'Alice',
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    };
+    await db.collection('users').doc(ULID).set(legacy);
+    const later = '2026-02-01T00:00:00.000Z';
+    const consent = { version: CURRENT_CONSENT_VERSION, acceptedAt: later };
+
+    const result = await repo.recordConsent(ULID, consent, later);
+
+    expect(result).toStrictEqual({
+      ...legacy,
+      locale: null,
+      timezone: null,
+      consent,
+      updatedAt: later,
+    });
+    const raw = (await db.collection('users').doc(ULID).get()).data();
+    expect(raw).toStrictEqual({ ...legacy, consent, updatedAt: later });
   });
 });

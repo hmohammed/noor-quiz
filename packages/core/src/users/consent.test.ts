@@ -10,9 +10,9 @@ const AT = '2026-11-01T00:00:00.000Z';
 
 describe('hasCurrentConsent', () => {
   it('is true only for the current version', () => {
-    expect(hasCurrentConsent({ consent: { version: CURRENT_CONSENT_VERSION, acceptedAt: AT } })).toBe(
-      true,
-    );
+    expect(
+      hasCurrentConsent({ consent: { version: CURRENT_CONSENT_VERSION, acceptedAt: AT } }),
+    ).toBe(true);
   });
 
   it.each([
