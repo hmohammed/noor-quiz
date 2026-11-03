@@ -1,10 +1,13 @@
 import {
   CommunityResponse,
+  CreateInviteResponse,
   HealthResponse,
+  InvitePreviewResponse,
   MeResponse,
   MyCommunitiesResponse,
   type AcceptConsentRequest,
   type CreateCommunityRequestInput,
+  type CreateInviteRequestInput,
   type UpdateMeRequestInput,
 } from '@noor/contracts';
 
@@ -54,6 +57,21 @@ export interface ApiClient {
     idToken: string;
     signal?: AbortSignal;
   }): Promise<MyCommunitiesResponse>;
+  /** Creates an invite for a community the signed-in user administers. */
+  createInvite(init: {
+    idToken: string;
+    tenantId: string;
+    body: CreateInviteRequestInput;
+    signal?: AbortSignal;
+  }): Promise<CreateInviteResponse>;
+  /** Public preview. No token: a signed-out visitor can load the community name. */
+  previewInvite(init: { token: string; signal?: AbortSignal }): Promise<InvitePreviewResponse>;
+  /** Joins the community behind an invite. The body is always empty. */
+  acceptInvite(init: {
+    idToken: string;
+    token: string;
+    signal?: AbortSignal;
+  }): Promise<CommunityResponse>;
 }
 
 interface Schema<T> {
@@ -147,6 +165,20 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       request('GET', '/v1/me/communities', MyCommunitiesResponse, {
         signal,
         headers: bearer(idToken),
+      }),
+    createInvite: ({ idToken, tenantId, body, signal }) =>
+      request('POST', `/v1/t/${encodeURIComponent(tenantId)}/invites`, CreateInviteResponse, {
+        signal,
+        headers: bearer(idToken),
+        body,
+      }),
+    previewInvite: ({ token, signal }) =>
+      request('GET', `/v1/invites/${encodeURIComponent(token)}`, InvitePreviewResponse, { signal }),
+    acceptInvite: ({ idToken, token, signal }) =>
+      request('POST', `/v1/invites/${encodeURIComponent(token)}/accept`, CommunityResponse, {
+        signal,
+        headers: bearer(idToken),
+        body: {},
       }),
   };
 }

@@ -11,6 +11,8 @@ import type { ReactNode } from 'react';
 import type {
   CommunityResponse,
   CreateCommunityRequestInput,
+  CreateInviteRequestInput,
+  CreateInviteResponse,
   MeResponse,
   MyCommunitiesResponse,
   UpdateMeRequestInput,
@@ -51,6 +53,10 @@ export interface Session {
   createCommunity(body: CreateCommunityRequestInput): Promise<CommunityResponse>;
   /** Loads the signed-in user's communities. Does not store them on the session. */
   listMyCommunities(): Promise<MyCommunitiesResponse>;
+  /** Creates an invite. The body is the caller's limits only; `{}` uses the defaults. */
+  createInvite(tenantId: string, body: CreateInviteRequestInput): Promise<CreateInviteResponse>;
+  /** Accepts an invite and returns the community summary. Does not store it on the session. */
+  acceptInvite(token: string): Promise<CommunityResponse>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -231,6 +237,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [withToken],
   );
 
+  const createInvite = useCallback(
+    (tenantId: string, body: CreateInviteRequestInput) =>
+      withToken((idToken, signal) => apiClient.createInvite({ idToken, tenantId, body, signal })),
+    [withToken],
+  );
+
+  const acceptInvite = useCallback(
+    (token: string) =>
+      withToken((idToken, signal) => apiClient.acceptInvite({ idToken, token, signal })),
+    [withToken],
+  );
+
   const deleteAccount = useCallback(async () => {
     cancelPending();
     const idToken = await getIdToken();
@@ -254,6 +272,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       deleteAccount,
       createCommunity,
       listMyCommunities,
+      createInvite,
+      acceptInvite,
     }),
     [
       state,
@@ -264,6 +284,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       deleteAccount,
       createCommunity,
       listMyCommunities,
+      createInvite,
+      acceptInvite,
     ],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

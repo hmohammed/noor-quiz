@@ -29,6 +29,8 @@ export interface CommunitiesViewProps {
   onNameChange(value: string): void;
   onTimezoneChange(value: string): void;
   onSubmit(): void;
+  /** Shown for admin and owner rows. */
+  onInvite?(community: CommunitySummary): void;
   /** Used by the `signed-out` state. */
   onSignIn?(): void;
   /** Used by the load-error state. */
@@ -47,6 +49,7 @@ export function CommunitiesView({
   onNameChange,
   onTimezoneChange,
   onSubmit,
+  onInvite,
   onSignIn,
   onRetry,
 }: CommunitiesViewProps) {
@@ -128,6 +131,15 @@ export function CommunitiesView({
                 {t('community.slug')} {community.slug}
               </span>
               <span className="community__role">{t(`community.role.${community.role}`)}</span>
+              {(community.role === 'admin' || community.role === 'owner') && (
+                <button
+                  type="button"
+                  className="auth__button community__invite"
+                  onClick={() => onInvite?.(community)}
+                >
+                  {t('community.invite')}
+                </button>
+              )}
             </li>
           ))}
         </ul>
