@@ -131,6 +131,16 @@ function CommunitiesEditor({
     );
   }
 
+  const refreshList = () => {
+    listMyCommunities().then(
+      (res) => {
+        setCommunities(res.communities);
+        setStatus('idle');
+      },
+      () => setStatus('list-error'),
+    );
+  };
+
   const handleSubmit = () => {
     if (status === 'saving') return;
     if (values.timezone === '') {
@@ -145,15 +155,10 @@ function CommunitiesEditor({
     }
     setStatus('saving');
     createCommunity({ name: values.name, timezone: values.timezone }).then(
-      () =>
-        listMyCommunities().then(
-          (res) => {
-            setCommunities(res.communities);
-            setValues((current) => ({ ...current, name: '' }));
-            setStatus('idle');
-          },
-          () => setStatus('error'),
-        ),
+      () => {
+        setValues((current) => ({ ...current, name: '' }));
+        refreshList();
+      },
       () => setStatus('error'),
     );
   };
@@ -164,13 +169,14 @@ function CommunitiesEditor({
       timeZones={timeZones}
       onNameChange={(name) => {
         setValues((current) => ({ ...current, name }));
-        if (status !== 'saving') setStatus('idle');
+        if (status !== 'saving' && status !== 'list-error') setStatus('idle');
       }}
       onTimezoneChange={(timezone) => {
         setValues((current) => ({ ...current, timezone }));
-        if (status !== 'saving') setStatus('idle');
+        if (status !== 'saving' && status !== 'list-error') setStatus('idle');
       }}
       onSubmit={handleSubmit}
+      onRetry={refreshList}
     />
   );
 }

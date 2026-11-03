@@ -7,7 +7,8 @@ export interface CommunityFormValues {
   timezone: string;
 }
 
-export type CommunityFormStatus = 'idle' | 'saving' | 'invalid-name' | 'invalid-timezone' | 'error';
+export type CommunityFormStatus =
+  'idle' | 'saving' | 'invalid-name' | 'invalid-timezone' | 'error' | 'list-error';
 
 export type CommunitiesViewState =
   | { kind: 'loading' }
@@ -191,6 +192,16 @@ export function CommunitiesView({
             <p role="alert" className="community__error">
               {t('community.error.save')}
             </p>
+          )}
+          {status === 'list-error' && (
+            <>
+              <p role="alert" className="community__error">
+                {t('community.error.created')}
+              </p>
+              <button type="button" className="auth__button" onClick={onRetry}>
+                {t('community.retry')}
+              </button>
+            </>
           )}
         </div>
       </form>

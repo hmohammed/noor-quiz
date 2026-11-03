@@ -124,8 +124,19 @@ describe('CommunitiesView', () => {
     expect(html).toMatch(
       new RegExp(`<p role="alert"[^>]*>${escape(en['community.error.save'])}</p>`),
     );
+    expect(html).not.toContain(en['community.error.created']);
     expect(html).toContain('<form');
     expect(html).toContain('Masjid Al-Noor');
+  });
+
+  it('created but the list failed: a different alert and Try again, not the save error', () => {
+    const html = ready('list-error', []);
+    expect(html).toContain(en['community.error.created']);
+    expect(html).not.toContain(en['community.error.save']);
+    expect(html).toMatch(
+      new RegExp(`<button type="button"[^>]*>${en['community.retry']}</button>`),
+    );
+    expect(html).toContain('<form');
   });
 
   it('uses an en.json value for every community string', () => {
@@ -139,6 +150,7 @@ describe('CommunitiesView', () => {
       ready('error', []),
       ready('invalid-name', []),
       ready('invalid-timezone', [], { name: 'Masjid', timezone: '' }),
+      ready('list-error', []),
       ready('idle', [
         community('member'),
         { ...community('scholar-reviewer'), tenantId: '01ARZ3NDEKTSV4RRFFQ69G5FAW' },

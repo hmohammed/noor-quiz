@@ -67,6 +67,7 @@
   "community.create": "Create community",
   "community.saving": "Saving…",
   "community.error.save": "Could not create the community. Please try again.",
+  "community.error.created": "The community was created, but the list could not be loaded.",
   "community.error.name": "Use 2–48 characters, starting with a letter. Letters, numbers, spaces, hyphens and apostrophes only.",
   "community.error.timezone": "Choose a timezone.",
   "community.slug": "Address",

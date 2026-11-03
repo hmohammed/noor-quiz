@@ -352,6 +352,10 @@ body {
   outline-offset: 2px;
 }
 
+.community__control[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
 .community__actions {
   display: flex;
   flex-wrap: wrap;
@@ -371,9 +375,16 @@ body {
 .community__item {
   display: flex;
   flex-direction: column;
-  align-items: start;
+  align-items: stretch;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   gap: var(--space-2);
   text-align: start;
+}
+
+.community__name,
+.community__slug {
+  overflow-wrap: break-word;
 }
 
 .community__name {
