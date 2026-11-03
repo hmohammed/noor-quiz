@@ -70,7 +70,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       { signal, isCurrent }: { signal?: AbortSignal; isCurrent: () => boolean },
     ) => {
       const body = timezoneDefault(me, browserTimeZone());
-      if (body === null) return;
+      if (body === null || !isCurrent()) return;
       apiClient.updateMe({ idToken, body, signal }).then(
         (updated) => {
           if (isCurrent()) setState({ kind: 'signed-in', me: updated });
@@ -176,7 +176,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const me = await acceptCurrentConsent(apiClient, { idToken, me: snapshot.me });
       if (isCurrent()) {
         setState({ kind: 'signed-in', me });
-        applyTimezoneDefault(idToken, me, { isCurrent });
+        // Same controller deleteAccount aborts. The sign-in load never sends this PATCH,
+        // because timezoneDefault waits until consent is accepted.
+        let controller = pending.current;
+        if (!controller || controller.signal.aborted) {
+          controller = new AbortController();
+          pending.current = controller;
+        }
+        applyTimezoneDefault(idToken, me, { signal: controller.signal, isCurrent });
       }
       return me;
     } catch (err) {
