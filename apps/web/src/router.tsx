@@ -6,6 +6,7 @@ import { AppLayout } from './features/layout/AppLayout';
 import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PRIVACY_PATH } from './features/privacy/policy';
 import { ProfilePage } from './features/profile/ProfilePage';
+import { SeasonsPage } from './features/seasons/SeasonsPage';
 
 export const router = createBrowserRouter([
   {
@@ -14,6 +15,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/communities', element: <CommunitiesPage /> },
       { path: '/join/:token', element: <JoinPage /> },
+      { path: '/communities/:tenantId/seasons', element: <SeasonsPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: PRIVACY_PATH, element: <PrivacyPage /> },
     ],

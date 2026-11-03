@@ -102,6 +102,8 @@ describe('CommunitiesView', () => {
     for (const role of ['member', 'scholar-reviewer', 'editor', 'admin', 'owner'] as const) {
       expect(html).toContain(en[`community.role.${role}`]);
     }
+    expect(html).toContain(`href="/communities/${ULID}/seasons"`);
+    expect(html).toContain(en['season.link']);
   });
 
   it('renders the invite panel in that row and makes the rest of the page inert', () => {

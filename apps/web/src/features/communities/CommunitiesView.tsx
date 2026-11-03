@@ -151,6 +151,9 @@ export function CommunitiesView({
                     {t('community.slug')} {community.slug}
                   </span>
                   <span className="community__role">{t(`community.role.${community.role}`)}</span>
+                  <a className="season__link" href={`/communities/${community.tenantId}/seasons`}>
+                    {t('season.link')}
+                  </a>
                   {(community.role === 'admin' || community.role === 'owner') && (
                     <button
                       type="button"

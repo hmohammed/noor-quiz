@@ -444,3 +444,84 @@ describe('apiClient.acceptInvite', () => {
     expect(JSON.parse(String(init?.body))).toEqual({});
   });
 });
+
+const TENANT = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const seasonView = {
+  id: ULID,
+  tenantId: TENANT,
+  name: 'Ramadan 1448',
+  kind: 'ramadan',
+  startDate: '2035-01-01',
+  lengthDays: 30,
+  timezone: 'Europe/Stockholm',
+  opensAtLocal: '08:00',
+  closesAtLocal: '21:00',
+  state: { phase: 'upcoming' },
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+describe('apiClient seasons', () => {
+  it('lists seasons with the bearer token', async () => {
+    const fetch = fakeFetch(json({ seasons: [seasonView] }));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+    await expect(client.listSeasons({ idToken: 'tok', tenantId: TENANT })).resolves.toEqual({
+      seasons: [seasonView],
+    });
+    expect(fetch.mock.calls[0]?.[0]).toBe(`http://api.test/v1/t/${TENANT}/seasons`);
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('authorization')).toBe('Bearer tok');
+  });
+
+  it('creates a season with the submitted body', async () => {
+    const fetch = fakeFetch(json(seasonView, 201));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+    const body = {
+      name: 'Ramadan 1448',
+      kind: 'ramadan' as const,
+      startDate: '2035-01-01',
+      lengthDays: 30,
+      timezone: 'Europe/Stockholm',
+      opensAtLocal: '08:00',
+      closesAtLocal: '21:00',
+    };
+    await expect(client.createSeason({ idToken: 'tok', tenantId: TENANT, body })).resolves.toEqual(
+      seasonView,
+    );
+    expect(fetch.mock.calls[0]?.[0]).toBe(`http://api.test/v1/t/${TENANT}/seasons`);
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe('POST');
+    expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual(body);
+  });
+
+  it('asks for a Ramadan suggestion and does not send a body', async () => {
+    const suggestion = {
+      hijriYear: 1448,
+      startDate: '2027-02-08',
+      lengthDays: 30,
+      advisory: true,
+    };
+    const fetch = fakeFetch(json(suggestion));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+    await expect(
+      client.suggestRamadanStart({
+        idToken: 'tok',
+        tenantId: TENANT,
+        timezone: 'Europe/Stockholm',
+      }),
+    ).resolves.toEqual(suggestion);
+    const url = String(fetch.mock.calls[0]?.[0]);
+    expect(url).toContain(`/v1/t/${TENANT}/seasons/ramadan-suggestion?`);
+    expect(url).toContain('timezone=Europe%2FStockholm');
+    expect(fetch.mock.calls[0]?.[1]?.body).toBeUndefined();
+  });
+
+  it('rejects a suggestion that is not marked advisory', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(
+        json({ hijriYear: 1448, startDate: '2027-02-08', lengthDays: 30, advisory: false }),
+      ),
+    });
+    await expect(
+      client.suggestRamadanStart({ idToken: 't', tenantId: TENANT, timezone: 'UTC' }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+});

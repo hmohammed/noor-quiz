@@ -5,9 +5,13 @@ import {
   InvitePreviewResponse,
   MeResponse,
   MyCommunitiesResponse,
+  RamadanSuggestionResponse,
+  SeasonListResponse,
+  SeasonView,
   type AcceptConsentRequest,
   type CreateCommunityRequestInput,
   type CreateInviteRequestInput,
+  type CreateSeasonRequestInput,
   type UpdateMeRequestInput,
 } from '@noor/contracts';
 
@@ -72,6 +76,26 @@ export interface ApiClient {
     token: string;
     signal?: AbortSignal;
   }): Promise<CommunityResponse>;
+  /** Seasons of one community the caller belongs to. */
+  listSeasons(init: {
+    idToken: string;
+    tenantId: string;
+    signal?: AbortSignal;
+  }): Promise<SeasonListResponse>;
+  /** Creates a season. The server decides the id, the tenant and the state. */
+  createSeason(init: {
+    idToken: string;
+    tenantId: string;
+    body: CreateSeasonRequestInput;
+    signal?: AbortSignal;
+  }): Promise<SeasonView>;
+  /** Advisory Hijri start. Does not create a season. */
+  suggestRamadanStart(init: {
+    idToken: string;
+    tenantId: string;
+    timezone: string;
+    signal?: AbortSignal;
+  }): Promise<RamadanSuggestionResponse>;
 }
 
 interface Schema<T> {
@@ -180,6 +204,24 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         headers: bearer(idToken),
         body: {},
       }),
+    listSeasons: ({ idToken, tenantId, signal }) =>
+      request('GET', `/v1/t/${encodeURIComponent(tenantId)}/seasons`, SeasonListResponse, {
+        signal,
+        headers: bearer(idToken),
+      }),
+    createSeason: ({ idToken, tenantId, body, signal }) =>
+      request('POST', `/v1/t/${encodeURIComponent(tenantId)}/seasons`, SeasonView, {
+        signal,
+        headers: bearer(idToken),
+        body,
+      }),
+    suggestRamadanStart: ({ idToken, tenantId, timezone, signal }) =>
+      request(
+        'GET',
+        `/v1/t/${encodeURIComponent(tenantId)}/seasons/ramadan-suggestion?${new URLSearchParams({ timezone })}`,
+        RamadanSuggestionResponse,
+        { signal, headers: bearer(idToken) },
+      ),
   };
 }
 
