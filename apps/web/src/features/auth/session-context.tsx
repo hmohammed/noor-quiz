@@ -39,6 +39,8 @@ export interface Session {
    * ConsentOutdatedError (after replacing `me`) when the terms changed meanwhile.
    */
   acceptConsent(): Promise<MeResponse>;
+  /** Deletes the account, then signs out. A failed delete leaves the session signed in. */
+  deleteAccount(): Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -78,15 +80,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+  // Hoisted so deleteAccount can cancel an in-flight /v1/me before the DELETE.
+  // A late PATCH would run requireUser() and recreate the user that was just deleted.
+  const cancelPending = useCallback(() => {
+    generation.current += 1;
+    pending.current?.abort();
+    pending.current = null;
+  }, []);
 
   useEffect(() => {
     if (!isConfigured()) return;
-
-    const cancelPending = () => {
-      generation.current += 1;
-      pending.current?.abort();
-      pending.current = null;
-    };
 
     const unsubscribe = onChange((signedIn) => {
       cancelPending();
@@ -125,7 +128,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       unsubscribe();
       cancelPending();
     };
-  }, [applyTimezoneDefault]);
+  }, [applyTimezoneDefault, cancelPending]);
 
   const signIn = useCallback(() => {
     setState({ kind: 'loading' });
@@ -171,9 +174,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [applyTimezoneDefault]);
 
+  const deleteAccount = useCallback(async () => {
+    cancelPending();
+    const idToken = await getIdToken();
+    if (idToken === null) throw new ApiError('Not signed in', { status: 401 });
+    await apiClient.deleteMe({ idToken });
+    try {
+      await sessionSignOut();
+    } catch {
+      // The account is already gone. Sign-out failed, so keep a session error and resolve.
+      setState({ kind: 'error', hasSession: true });
+    }
+  }, [cancelPending]);
+
   const value = useMemo(
-    () => ({ state, signIn, signOut, updateMe, acceptConsent }),
-    [state, signIn, signOut, updateMe, acceptConsent],
+    () => ({ state, signIn, signOut, updateMe, acceptConsent, deleteAccount }),
+    [state, signIn, signOut, updateMe, acceptConsent, deleteAccount],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

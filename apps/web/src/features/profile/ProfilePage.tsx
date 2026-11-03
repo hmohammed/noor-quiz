@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { UpdateMeRequest, type MeResponse, type UpdateMeRequestInput } from '@noor/contracts';
 import { ApiError } from '../../api/client';
 import { useSession, type Session } from '../auth/session-context';
+import { DeleteAccountView, type DeleteAccountStatus } from './DeleteAccountView';
 import {
   ProfileFormView,
   type ProfileFormStatus,
@@ -52,6 +54,7 @@ export function ProfilePage() {
         key={state.me.userId}
         me={state.me}
         updateMe={session.updateMe}
+        deleteAccount={session.deleteAccount}
         timeZones={timeZones}
       />
     );
@@ -81,15 +84,19 @@ export function ProfilePage() {
 function ProfileEditor({
   me,
   updateMe,
+  deleteAccount,
   timeZones,
 }: {
   me: MeResponse;
   updateMe: Session['updateMe'];
+  deleteAccount: Session['deleteAccount'];
   timeZones: readonly string[];
 }) {
+  const navigate = useNavigate();
   // Edited fields only, so a later `me` (e.g. the browser timezone default) still shows.
   const [draft, setDraft] = useState<Partial<ProfileValues>>({});
   const [status, setStatus] = useState<ProfileFormStatus>('idle');
+  const [deleteStatus, setDeleteStatus] = useState<DeleteAccountStatus>('idle');
   const values: ProfileValues = { ...valuesOf(me), ...draft };
 
   const handleChange = <K extends keyof ProfileValues>(field: K, value: ProfileValues[K]) => {
@@ -123,12 +130,36 @@ function ProfileEditor({
     );
   };
 
+  const confirmDelete = () => {
+    if (deleteStatus === 'deleting') return;
+    setDeleteStatus('deleting');
+    deleteAccount().then(
+      () => {
+        navigate('/', { replace: true });
+      },
+      () => {
+        setDeleteStatus('error');
+      },
+    );
+  };
+
   return (
     <ProfileFormView
       state={{ kind: 'form', status, values }}
       timeZones={timeZones}
       onChange={handleChange}
       onSubmit={handleSubmit}
+      afterForm={
+        <DeleteAccountView
+          status={deleteStatus}
+          onStart={() => setDeleteStatus('confirming')}
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            if (deleteStatus === 'deleting') return;
+            setDeleteStatus('idle');
+          }}
+        />
+      }
     />
   );
 }

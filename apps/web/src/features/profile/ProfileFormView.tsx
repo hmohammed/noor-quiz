@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import type { Locale } from '@noor/contracts';
 import { LOCALES } from '../../i18n/locales';
 import { t } from '../../i18n/t';
@@ -30,6 +30,8 @@ export interface ProfileFormViewProps {
   onSignIn?(): void;
   /** Used by the `error` state. */
   onRetry?(): void;
+  /** Rendered after the form, only in the form state. Never inside the `<form>`. */
+  afterForm?: ReactNode;
 }
 
 const NAME_ID = 'profile-display-name';
@@ -45,6 +47,7 @@ export function ProfileFormView({
   onSubmit,
   onSignIn,
   onRetry,
+  afterForm,
 }: ProfileFormViewProps) {
   const title = <h1 className="profile__title">{t('profile.title')}</h1>;
 
@@ -187,6 +190,7 @@ export function ProfileFormView({
           )}
         </div>
       </form>
+      {afterForm}
     </main>
   );
 }
