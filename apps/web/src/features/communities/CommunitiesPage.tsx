@@ -142,7 +142,7 @@ function CommunitiesEditor({
   };
 
   const handleSubmit = () => {
-    if (status === 'saving') return;
+    if (status === 'saving' || status === 'list-error') return;
     if (values.timezone === '') {
       setStatus('invalid-timezone');
       return;

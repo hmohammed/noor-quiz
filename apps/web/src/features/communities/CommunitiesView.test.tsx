@@ -136,6 +136,12 @@ describe('CommunitiesView', () => {
     expect(html).toMatch(
       new RegExp(`<button type="button"[^>]*>${en['community.retry']}</button>`),
     );
+    expect(html).not.toContain(escape(en['community.empty']));
+    expect(html).toMatch(
+      new RegExp(
+        `<button type="submit"[^>]*disabled=""[^>]*>${escape(en['community.create'])}</button>`,
+      ),
+    );
     expect(html).toContain('<form');
   });
 

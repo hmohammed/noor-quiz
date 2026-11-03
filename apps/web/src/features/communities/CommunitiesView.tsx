@@ -97,6 +97,7 @@ export function CommunitiesView({
 
   const { status, values, communities } = state;
   const saving = status === 'saving';
+  const listError = status === 'list-error';
   const invalidName = status === 'invalid-name';
   const invalidTimezone = status === 'invalid-timezone';
   const zones =
@@ -113,7 +114,9 @@ export function CommunitiesView({
     <main className="page">
       {title}
       {communities.length === 0 ? (
-        <p className="community__status">{t('community.empty')}</p>
+        listError ? null : (
+          <p className="community__status">{t('community.empty')}</p>
+        )
       ) : (
         <ul className="community__list">
           {communities.map((community) => (
@@ -180,7 +183,7 @@ export function CommunitiesView({
           )}
         </div>
         <div className="community__actions">
-          <button type="submit" className="auth__button" disabled={saving}>
+          <button type="submit" className="auth__button" disabled={saving || listError}>
             {saving ? t('community.saving') : t('community.create')}
           </button>
           {saving && (
