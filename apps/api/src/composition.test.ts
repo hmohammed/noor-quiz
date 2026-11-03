@@ -1,6 +1,10 @@
 import { getApps } from 'firebase-admin/app';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FirebaseAuthVerifier } from './adapters/firebase/auth-verifier';
+import {
+  FirestoreCommunityRepo,
+  FirestoreMembershipRepo,
+} from './adapters/firebase/community-repo';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
 import { UlidIdGenerator } from './adapters/system/ulid-id-generator';
@@ -70,6 +74,8 @@ describe('createComposition', () => {
     expect(root.deps.clock).toBeInstanceOf(SystemClock);
     expect(root.deps.ids).toBeInstanceOf(UlidIdGenerator);
     expect(root.deps.users).toBeInstanceOf(FirestoreUserRepo);
+    expect(root.deps.communities).toBeInstanceOf(FirestoreCommunityRepo);
+    expect(root.deps.memberships).toBeInstanceOf(FirestoreMembershipRepo);
     expect(built.auths).toBe(1);
     expect(built.clocks).toBe(1);
     expect(built.firestores).toBe(1);

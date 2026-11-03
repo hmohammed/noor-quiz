@@ -29,6 +29,7 @@ const rules = readFileSync(fileURLToPath(new URL('./firestore.rules', import.met
 
 const ALICE = 'uid-alice';
 const ALICE_USER_ID = '01JAAAAAAAAAAAAAAAAAAAAAAA';
+const TENANT_ID = '01KAAAAAAAAAAAAAAAAAAAAAAA';
 const AT = '2026-01-01T00:00:00.000Z';
 
 const seeds = {
@@ -58,6 +59,43 @@ const seeds = {
     },
   },
   anything: { id: 'x', data: { v: 1 } },
+  communities: {
+    id: TENANT_ID,
+    data: {
+      id: TENANT_ID,
+      tenantId: TENANT_ID,
+      name: 'Masjid Al-Noor',
+      slug: 'masjid-al-noor',
+      timezone: 'Europe/Stockholm',
+      createdBy: ALICE_USER_ID,
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    },
+  },
+  memberships: {
+    id: `${ALICE_USER_ID}_${TENANT_ID}`,
+    data: {
+      id: `${ALICE_USER_ID}_${TENANT_ID}`,
+      tenantId: TENANT_ID,
+      userId: ALICE_USER_ID,
+      role: 'owner',
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    },
+  },
+  communitySlugs: {
+    id: 'masjid-al-noor',
+    data: {
+      id: 'masjid-al-noor',
+      slug: 'masjid-al-noor',
+      tenantId: TENANT_ID,
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    },
+  },
 } as const;
 
 type CollectionName = keyof typeof seeds;

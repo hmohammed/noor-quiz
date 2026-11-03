@@ -34,6 +34,18 @@ describe('@noor/core', () => {
     'isValidConsent',
     'acceptConsent',
     'deleteAccount',
+    'asTenantId',
+    'membershipId',
+    'isRole',
+    'roleAtLeast',
+    'normaliseCommunityName',
+    'isBaseSlug',
+    'baseSlug',
+    'slugCandidates',
+    'chooseSlug',
+    'validateCreateWithOwner',
+    'createCommunity',
+    'listMyCommunities',
   ])('exports %s', (name) => {
     expect(typeof (core as Record<string, unknown>)[name]).toBe('function');
   });
@@ -42,5 +54,12 @@ describe('@noor/core', () => {
     expect(core.ULID_PATTERN).toBeInstanceOf(RegExp);
     expect(core.SUBJECT_PATTERN).toBeInstanceOf(RegExp);
     expect(core.USER_SCHEMA_VERSION).toBe(1);
+  });
+
+  it('exports the community constants', () => {
+    expect(core.ROLES).toEqual(['member', 'scholar-reviewer', 'editor', 'admin', 'owner']);
+    expect(core.COMMUNITY_SCHEMA_VERSION).toBe(1);
+    expect(core.MEMBERSHIP_SCHEMA_VERSION).toBe(1);
+    expect(core.COMMUNITY_SLUG_SCHEMA_VERSION).toBe(1);
   });
 });

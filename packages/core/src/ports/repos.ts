@@ -1,3 +1,9 @@
+import type {
+  Community,
+  CreateWithOwnerInput,
+  Membership,
+  TenantId,
+} from '../communities/community';
 import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
@@ -49,4 +55,63 @@ export interface UserRepo {
    * Non-ULID id: throws VALIDATION.
    */
   deleteUserAndIdentities(userId: UserId): Promise<void>;
+}
+
+/**
+ * Tenant-owned `communities/{tenantId}` plus the `communitySlugs/{slug}` uniqueness
+ * lock. No composite index: slug reservation is a document get by id, and listing
+ * sorts in the use case after the reads.
+ *
+ * `communities/{tenantId}`: `{ id, tenantId, name, slug, timezone, createdBy, createdAt,
+ * updatedAt, schemaVersion: 1 }`. `id` equals `tenantId`.
+ * `communitySlugs/{slug}`: `{ id, slug, tenantId, createdAt, updatedAt, schemaVersion: 1 }`.
+ * `id` equals `slug`. On create, `updatedAt` equals `createdAt`. Timestamps are the UTC
+ * ISO strings the caller passes; implementations do not read a clock.
+ */
+export interface CommunityRepo {
+  /** The community, or null. `tenantId` is the document id. */
+  getById(tenantId: TenantId): Promise<Community | null>;
+  /** Communities for these ids. Missing ids are omitted. */
+  getByIds(tenantIds: readonly TenantId[]): Promise<Community[]>;
+  /**
+   * Atomic. Checks `community.id === community.tenantId === membership.tenantId`,
+   * `membership.userId === community.createdBy`, `membership.role === "owner"` and
+   * `membership.id === membershipId(...)`. Any mismatch is `VALIDATION` and writes
+   * nothing. Reads every slug candidate, chooses one with `chooseSlug`, then writes
+   * the community, the owner membership and `communitySlugs/{slug}` together. An
+   * existing community id, membership id, or no free slug is `CONFLICT` and writes
+   * nothing. Returns the stored community (with the chosen slug) and membership.
+   */
+  createWithOwner(
+    input: CreateWithOwnerInput,
+  ): Promise<{ community: Community; membership: Membership }>;
+}
+
+/**
+ * `memberships/{userId}_{tenantId}`: `{ id, tenantId, userId, role, createdAt, updatedAt,
+ * schemaVersion: 1 }`. `get` takes `tenantId` first.
+ *
+ * `listByUser` and `deleteByUser` are the only methods that omit `tenantId`. They are
+ * the caller's own account, not a tenant query: they still take a server-resolved
+ * `userId`, never a client id. Both are single-field `userId` equality queries, served
+ * by Firestore's automatic index, so no composite index is needed.
+ *
+ * There is no `setRole` and no public create. The only membership write is the owner
+ * row inside `CommunityRepo.createWithOwner`, plus `deleteByUser`.
+ */
+export interface MembershipRepo {
+  /** The membership for this tenant and user, or null. Does not reveal other tenants. */
+  get(tenantId: TenantId, userId: UserId): Promise<Membership | null>;
+  /**
+   * Memberships whose `userId` is this user, in every tenant. Not tenant-scoped: the
+   * caller's own list. A non-ULID id throws `VALIDATION`.
+   */
+  listByUser(userId: UserId): Promise<Membership[]>;
+  /**
+   * Deletes every membership whose `userId` is this user. Not tenant-scoped: account
+   * deletion only. Does not delete `communities` or `communitySlugs`. When more than
+   * 400 match, repeats until none remain. A non-ULID id throws `VALIDATION`. No
+   * memberships is a success. Idempotent.
+   */
+  deleteByUser(userId: UserId): Promise<void>;
 }

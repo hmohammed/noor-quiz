@@ -1,8 +1,13 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { Deps } from '@noor/core';
+import { createCommunity, type Deps } from '@noor/core';
 import { FakeAuthVerifier } from './fake-auth-verifier';
 import { FakeClock } from './fake-clock';
 import { FakeIdGenerator } from './fake-id-generator';
+import {
+  createInMemoryCommunityStore,
+  InMemoryCommunityRepo,
+  InMemoryMembershipRepo,
+} from './in-memory-community-store';
 import { InMemoryUserRepo } from './in-memory-user-repo';
 import { makeTestDeps } from './make-test-deps';
 
@@ -22,6 +27,22 @@ describe('makeTestDeps', () => {
     expect(deps.auth).toBeInstanceOf(FakeAuthVerifier);
     expect(deps.ids).toBeInstanceOf(FakeIdGenerator);
     expect(deps.users).toBeInstanceOf(InMemoryUserRepo);
+    expect(deps.communities).toBeInstanceOf(InMemoryCommunityRepo);
+    expect(deps.memberships).toBeInstanceOf(InMemoryMembershipRepo);
+  });
+
+  it('shares one community store between the default repos', async () => {
+    const deps = makeTestDeps();
+    const userId = deps.ids.newId();
+    const { membership } = await createCommunity(deps, {
+      userId,
+      name: 'Masjid Al-Noor',
+      timezone: 'UTC',
+    });
+    expect(await deps.memberships.get(membership.tenantId, membership.userId)).toMatchObject({
+      role: 'owner',
+      userId: membership.userId,
+    });
   });
 
   it('returns fresh fakes on every call', () => {
@@ -31,6 +52,8 @@ describe('makeTestDeps', () => {
     expect(a.clock).not.toBe(b.clock);
     expect(a.ids).not.toBe(b.ids);
     expect(a.users).not.toBe(b.users);
+    expect(a.communities).not.toBe(b.communities);
+    expect(a.memberships).not.toBe(b.memberships);
   });
 
   it('uses overriding fakes', () => {
@@ -43,5 +66,20 @@ describe('makeTestDeps', () => {
     expect(deps.clock).toBe(clock);
     expect(deps.ids).toBe(ids);
     expect(deps.users).toBe(users);
+  });
+
+  it('replaces only the community repo that was overridden', async () => {
+    const store = createInMemoryCommunityStore();
+    const deps = makeTestDeps({ communities: store.communities });
+    expect(deps.communities).toBe(store.communities);
+    expect(deps.memberships).not.toBe(store.memberships);
+
+    const { membership } = await createCommunity(deps, {
+      userId: deps.ids.newId(),
+      name: 'Masjid Al-Noor',
+      timezone: 'UTC',
+    });
+    expect(await store.memberships.get(membership.tenantId, membership.userId)).not.toBeNull();
+    expect(await deps.memberships.listByUser(membership.userId)).toEqual([]);
   });
 });

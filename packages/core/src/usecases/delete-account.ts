@@ -1,14 +1,15 @@
-import type { UserRepo } from '../ports/repos';
+import type { MembershipRepo, UserRepo } from '../ports/repos';
 import type { IdentityKey } from '../users/user';
 
 /**
- * Deletes the signed-in person's account: their user doc and every linked identity, so
- * the next sign-in starts from scratch. Takes the verified identity, not a user id, so a
- * repeat call never creates a user first. Extended by T020 (delete memberships) and
- * T040 (anonymise answers: drop `userId`, keep scores).
+ * Deletes the signed-in person's account. Memberships in every community go first,
+ * then the user doc and every linked identity, so a retry still finds the user.
+ * Community docs and slug reservations stay: a community can be left with no owner
+ * until T022. Takes the verified identity, not a user id, so a repeat call never
+ * creates a user first. T040 still anonymises answers (drop `userId`, keep scores).
  */
 export async function deleteAccount(
-  deps: { users: UserRepo },
+  deps: { users: UserRepo; memberships: MembershipRepo },
   input: { identity: IdentityKey },
 ): Promise<{ deleted: boolean }> {
   const user = await deps.users.getByIdentity({
@@ -16,6 +17,7 @@ export async function deleteAccount(
     subject: input.identity.subject,
   });
   if (!user) return { deleted: false };
+  await deps.memberships.deleteByUser(user.id);
   await deps.users.deleteUserAndIdentities(user.id);
   return { deleted: true };
 }
