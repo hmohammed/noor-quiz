@@ -29,7 +29,7 @@ Skills: `api-endpoint`, `firestore-data`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+Extend `deleteAccount` from T013c: when a user deletes their account, remove their memberships too.
 
 ## T021
 

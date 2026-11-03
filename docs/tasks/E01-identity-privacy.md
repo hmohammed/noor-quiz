@@ -192,4 +192,107 @@ Skills: `api-endpoint`, `firestore-data`
 
 **Notes**
 
+Split into T013a, T013b and T013c. Memberships and answers do not exist yet, so deletion of those moves to T020 and T040.
+
+## T013a
+
+**Consent: record it and block protected endpoints without it**
+
+Phase: P1 · Depends on: [T011](E01-identity-privacy.md#t011) · Tags: `sec`
+Skills: `api-endpoint`, `firestore-data`, `vertical-slice`
+
+**Goal.** The API knows whether a user has accepted the current privacy terms. Protected endpoints refuse users who have not.
+
+**Scope**
+
+- Core `packages/core/src/users/consent.ts`: `CURRENT_CONSENT_VERSION` (a string constant, e.g. `'2026-11-01'`), type `Consent = { version: string; acceptedAt: string }` and `hasCurrentConsent(user): boolean`. `User` gains `consent: Consent | null`. It stays `schemaVersion: 1`, and docs written without the key read it as `null` (the same approach T011 took). The `getOrCreateUser` use case creates users with `consent: null`.
+- Add a new `DomainErrorCode` `CONSENT_REQUIRED`. `apps/api/src/errors.ts` maps it to 403 with the public message `'Consent required'`. The map is exhaustive, so typecheck enforces this.
+- Add `UserRepo.recordConsent(userId, consent, updatedAt): Promise<User>`. It writes only `consent` and `updatedAt`, and throws `NOT_FOUND` or `VALIDATION` the same way `updateProfile` does. Implement it in `InMemoryUserRepo`, extend `runUserRepoContract` to cover it, and implement it in `FirestoreUserRepo`. The `UserDoc` schema becomes `consent: z.strictObject({ version, acceptedAt }).nullable().default(null)`.
+- Use case `packages/core/src/usecases/accept-consent.ts`: `acceptConsent(deps: { clock, users }, { userId, version })`.
+  - If `version` is not `CURRENT_CONSENT_VERSION`, it throws `CONFLICT` (the client showed outdated terms).
+  - If the user already accepted this version, it writes nothing and returns the user, keeping the original `acceptedAt`.
+  - Otherwise it records `{ version, acceptedAt: clock.now() }`.
+- Contracts `packages/contracts/src/me.ts`:
+  - `AcceptConsentRequest = z.strictObject({ version: z.string().min(1).max(32) })`.
+  - `MeResponse` gains `consent: z.strictObject({ currentVersion: z.string(), acceptedVersion: z.string().nullable(), required: z.boolean() })`, where `required` is true when the user has not accepted the current version. Never include `acceptedAt` or any other user-doc field.
+  - Update every `MeResponse` fixture in apps/api and apps/web tests.
+- `RequestUser` (`apps/api/src/app-env.ts`) gains `consentVersion: string | null`, set by `requireUser()`.
+- Middleware `apps/api/src/middleware/require-consent.ts`: `requireConsent()` runs after `requireUser()`. It throws `CONSENT_REQUIRED` unless `consentVersion === CURRENT_CONSENT_VERSION`. Future routes (T020 onward) use `requireUser(), requireConsent()`.
+- Routes in `apps/api/src/routes/me.ts`:
+  - `GET /v1/me` needs no consent and returns the consent block.
+  - `POST /v1/me/consent` needs no consent. It uses the same `bodyLimit` and `parseJsonBody` as PATCH, takes `AcceptConsentRequest`, and returns `MeResponse` with status 200.
+  - `PATCH /v1/me` now requires consent. It is the first protected endpoint, because it processes personal data.
+  - (`DELETE /v1/me` will also be exempt; T013c adds it.)
+
+**Acceptance criteria**
+
+- [ ] Calls to a protected endpoint without consent return 403 `CONSENT_REQUIRED`. Route tests check that `PATCH /v1/me` returns 403 with an `ErrorResponse` code `CONSENT_REQUIRED` for a new user and for a user who accepted an older version, and returns 200 after `POST /v1/me/consent`. A middleware unit test on a throwaway Hono route checks the same.
+- [ ] `GET /v1/me` and `POST /v1/me/consent` succeed without consent. `GET` reports `required: true` for a new user and `false` after accepting.
+- [ ] `POST /v1/me/consent` returns 401 without a token, 400 for a malformed body, an extra key (e.g. `acceptedAt`, `userId`) or an oversized body, and 409 `CONFLICT` for a version that is not current. A second accept keeps the first `acceptedAt` (core test using `FakeClock`).
+- [ ] The `UserRepo` contract (in-memory and Firestore emulator) covers `recordConsent`. It writes only `consent` and `updatedAt`, other users are untouched, and an unknown user gives `NOT_FOUND`. A doc without a `consent` key reads as `consent: null`.
+- [ ] `MeResponse` stays strict. A route test checks that the serialised body contains no `acceptedAt`, Firebase uid or email.
+
+**Notes**
+
+Future routes (T020 onward) use `requireUser(), requireConsent()`.
+
+## T013b
+
+**Web: consent screen at first sign-in and a /privacy page**
+
+Phase: P1 · Depends on: [T013a](E01-identity-privacy.md#t013a) · Tags: `sec`
+Skills: `vertical-slice`, `i18n-rtl`
+
+**Goal.** A signed-in user who has not accepted the current terms sees a consent screen before anything else and can read the privacy page.
+
+**Scope**
+
+- Consent gate `apps/web/src/features/consent/ConsentGate.tsx` (+ a `ConsentGateView.tsx` with view tests). It is not a route. `AppLayout` renders it in place of `<Outlet />` while `me.consent.required` is true, except on `/privacy`. It shows a short summary, a link to `/privacy`, and an "I agree" button. It has loading and error states, and its error state covers a 409 (outdated terms), where it reloads `/v1/me`.
+- `useSession()` gains `acceptConsent()`. It calls `apiClient.acceptConsent({ idToken, body: { version: me.consent.currentVersion } })` (`POST /v1/me/consent`, parses `MeResponse`) and replaces `me`. The client's `request()` method type widens to `'POST'`.
+- The timezone default in `SessionProvider` must not fire `PATCH /v1/me` while consent is required, because it would now get 403. Run it after consent is accepted instead.
+- Page `apps/web/src/features/privacy/PrivacyPage.tsx` at `/privacy` is public. Its placeholder text comes from config: a small `apps/web/src/features/privacy/policy.ts` lists the section i18n keys, and the text lives in `en.json` under `privacy.*`. Add a footer or header link to it in `AppLayout`.
+- All strings go through `t()` (`consent.*`, `privacy.*` in `en.json`). Use logical CSS properties, and the page must work in RTL.
+- e2e `apps/web/e2e/consent.spec.ts` on the Auth emulator: a new user signs in, sees the consent screen, opens `/privacy`, accepts, and then sees the home page and can open `/profile`. Update `e2e/helpers/sign-in.ts` (and `profile.spec.ts` if needed) so existing specs accept consent first.
+
+**Acceptance criteria**
+
+- [ ] A new user sees the consent screen after sign-in. After agreeing they reach the app, and a reload does not show the screen again (e2e).
+- [ ] `/privacy` is reachable signed out and while consent is pending (view test and e2e).
+- [ ] View tests cover the loading, error and outdated-terms states, and every string is an i18n key.
+
+**Notes**
+
 _(implementer adds notes for the next task here)_
+
+## T013c
+
+**Delete my account**
+
+Phase: P1 · Depends on: [T013a](E01-identity-privacy.md#t013a) · Tags: `sec`
+Skills: `api-endpoint`, `firestore-data`, `vertical-slice`, `i18n-rtl`
+
+**Goal.** A user deletes their account themselves. Their user record and every linked identity are gone, and signing in again starts from scratch.
+
+**Scope**
+
+- Add `UserRepo.deleteUserAndIdentities(userId): Promise<void>`. It is atomic and deletes `users/{userId}` and every `identities` doc whose `userId` matches. An unknown user is a no-op, not an error, and a non-ULID id gives `VALIDATION`. Implement it in `InMemoryUserRepo`, cover it in `runUserRepoContract`, and implement it in `FirestoreUserRepo` with a `runTransaction` that reads the `identities where userId ==` query and deletes everything. That is a single-field equality query, so it needs no composite index (say so in the PR).
+- Use case `packages/core/src/usecases/delete-account.ts`: `deleteAccount(deps: { users }, { identity: IdentityKey })`. It looks the user up with `getByIdentity`. If there is no user it returns `{ deleted: false }`; otherwise it calls `deleteUserAndIdentities` and returns `{ deleted: true }`. Its JSDoc names T020 (memberships) and T040 (anonymise answers: drop `userId`, keep scores) as the tasks that extend it.
+- Middleware `requireIdentity()` in `apps/api/src/middleware/require-user.ts`. It parses the bearer token the same way as `requireUser()` (share the parsing code), calls `deps.auth.verify`, and sets `c.var.identity`. It never calls `getOrCreateUser`, so a repeated DELETE does not create and then delete a fresh user.
+- Route `DELETE /v1/me` uses `requireIdentity()` with no consent check and no body, and returns 204 in both cases. Do not revoke the Firebase Auth account or its tokens; that needs a port change and is a follow-up.
+- Web:
+  - A "Delete my account" section on the existing `/profile` page. It has a confirm step, pending and error states, and RTL-safe layout.
+  - On success it signs out and navigates to `/`.
+  - `apiClient.deleteMe({ idToken })` returns `void` and accepts 204 with no body.
+  - Add `useSession().deleteAccount()`.
+  - Put strings in `en.json` under `profile.delete.*`.
+- e2e `apps/web/e2e/delete-account.spec.ts`: sign in, accept consent, set a name, delete the account, then sign in again with the same emulator account. The user sees the consent screen again, and once past it, the old name is gone.
+
+**Acceptance criteria**
+
+- [ ] After delete, the same Google account signing in gets a new userId and no old data. Core and route tests sign in, accept consent, set a profile, then call DELETE and `GET /v1/me` with the same fake identity. They check that the `userId` differs, `displayName`/`locale`/`timezone` are back to the new-user values, and `consent.required` is true. The `UserRepo` contract (in-memory and emulator) checks that no `users` or `identities` doc for the old id remains, and that a second user is untouched. The e2e covers the same flow.
+- [ ] Deletion is idempotent. Two DELETEs in a row both return 204, and the second writes nothing and creates no user (counts stay 0). `deleteUserAndIdentities` on an unknown ULID resolves without an error in both implementations.
+- [ ] `DELETE /v1/me` returns 401 without a token or with a rejected token, and works without consent.
+
+**Notes**
+
+Do not revoke the Firebase Auth account or its tokens here. That needs a change to the auth port and is a follow-up.
