@@ -1,4 +1,4 @@
-import type { Deps, Locale, TimeZone, UserId } from '@noor/core';
+import type { Deps, IdentityKey, Locale, TimeZone, UserId } from '@noor/core';
 
 /** The signed-in user as routes see it: our id and profile only, never provider data. */
 export interface RequestUser {
@@ -10,7 +10,10 @@ export interface RequestUser {
   consentVersion: string | null;
 }
 
-/** Hono variables. `deps` is set for every request; `user` only after `requireUser()`. */
+/**
+ * Hono variables. `deps` is set for every request. `user` is set only after
+ * `requireUser()`. `identity` is set only after `requireIdentity()`.
+ */
 export interface AppEnv {
-  Variables: { deps: Deps; user: RequestUser };
+  Variables: { deps: Deps; user: RequestUser; identity: IdentityKey };
 }
