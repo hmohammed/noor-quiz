@@ -3,26 +3,23 @@ import { expect, type Page, type Response } from '@playwright/test';
 const isGetMe = (res: Response) =>
   new URL(res.url()).pathname === '/v1/me' && res.request().method() === 'GET';
 
+const isPostConsent = (res: Response) =>
+  new URL(res.url()).pathname === '/v1/me/consent' && res.request().method() === 'POST';
+
 /**
- * Accepts the current consent through the real `POST /v1/me/consent`, with the signed-in
- * user's own token taken from their `GET /v1/me`, then reloads so the app sees it.
- * Resolves with the `GET /v1/me` response after the reload. Never logs the header or
- * token. T013b replaces this with the consent screen.
+ * Agrees on the consent screen the way a user does: expects the screen, clicks
+ * "I agree", and waits for `POST /v1/me/consent` to return 200 and the screen to go.
+ * Resolves with that response.
  */
-export async function acceptConsentViaApi(page: Page, meResponse: Response): Promise<Response> {
-  const authorization = (await meResponse.request().allHeaders())['authorization'];
-  expect(authorization, 'GET /v1/me carried an Authorization header').toBeTruthy();
-  const body = (await meResponse.json()) as { consent: { currentVersion: string } };
-
-  const accepted = await page.request.post('/v1/me/consent', {
-    headers: { authorization: authorization as string },
-    data: { version: body.consent.currentVersion },
-  });
-  expect(accepted.status()).toBe(200);
-
-  const reloaded = page.waitForResponse(isGetMe);
-  await page.reload();
-  return reloaded;
+export async function acceptConsentOnScreen(page: Page): Promise<Response> {
+  const heading = page.getByRole('heading', { level: 1, name: 'Before you start' });
+  await expect(heading).toBeVisible();
+  const accepted = page.waitForResponse(isPostConsent);
+  await page.getByRole('button', { name: 'I agree' }).click();
+  const res = await accepted;
+  expect(res.status()).toBe(200);
+  await expect(heading).toHaveCount(0);
+  return res;
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   signIn as sessionSignIn,
   signOut as sessionSignOut,
 } from '../../auth/session';
+import { ConsentOutdatedError, acceptCurrentConsent } from './accept-consent';
 import { browserTimeZone, timezoneDefault } from './timezone-default';
 
 export type SessionState =
@@ -33,6 +34,11 @@ export interface Session {
   signOut(): void;
   /** Saves a profile patch through the API and replaces `me` on success. */
   updateMe(patch: UpdateMeRequestInput): Promise<MeResponse>;
+  /**
+   * Accepts the consent version the server asked for and replaces `me`. Throws
+   * ConsentOutdatedError (after replacing `me`) when the terms changed meanwhile.
+   */
+  acceptConsent(): Promise<MeResponse>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -48,6 +54,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Bumped on every auth change and on unmount, so a late API result is dropped.
   const generation = useRef(0);
   const pending = useRef<AbortController | null>(null);
+  // Read by callbacks so they see the latest `me` without being recreated on every render.
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // Fire-and-forget: a failure leaves the user without a timezone, as before.
+  const applyTimezoneDefault = useCallback(
+    (
+      idToken: string,
+      me: MeResponse,
+      { signal, isCurrent }: { signal?: AbortSignal; isCurrent: () => boolean },
+    ) => {
+      const body = timezoneDefault(me, browserTimeZone());
+      if (body === null) return;
+      apiClient.updateMe({ idToken, body, signal }).then(
+        (updated) => {
+          if (isCurrent()) setState({ kind: 'signed-in', me: updated });
+        },
+        () => undefined,
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isConfigured()) return;
@@ -74,7 +104,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         .then((idToken) => {
           if (idToken === null) return null;
           return apiClient.getMe({ idToken, signal: controller.signal }).then((me) => {
-            if (isCurrent()) applyTimezoneDefault(idToken, me);
+            if (isCurrent()) {
+              applyTimezoneDefault(idToken, me, { signal: controller.signal, isCurrent });
+            }
             return me;
           });
         })
@@ -87,25 +119,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             if (isCurrent()) setState({ kind: 'error', hasSession: true });
           },
         );
-
-      // Fire-and-forget: a failure leaves the user without a timezone, as before.
-      function applyTimezoneDefault(idToken: string, me: MeResponse) {
-        const body = timezoneDefault(me, browserTimeZone());
-        if (body === null) return;
-        apiClient.updateMe({ idToken, body, signal: controller.signal }).then(
-          (updated) => {
-            if (isCurrent()) setState({ kind: 'signed-in', me: updated });
-          },
-          () => undefined,
-        );
-      }
     });
 
     return () => {
       unsubscribe();
       cancelPending();
     };
-  }, []);
+  }, [applyTimezoneDefault]);
 
   const signIn = useCallback(() => {
     setState({ kind: 'loading' });
@@ -129,9 +149,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return me;
   }, []);
 
+  const acceptConsent = useCallback(async () => {
+    const current = generation.current;
+    const isCurrent = () => current === generation.current;
+    const snapshot = stateRef.current;
+    if (snapshot.kind !== 'signed-in') throw new ApiError('Not signed in', { status: 401 });
+    const idToken = await getIdToken();
+    if (idToken === null) throw new ApiError('Not signed in', { status: 401 });
+    try {
+      const me = await acceptCurrentConsent(apiClient, { idToken, me: snapshot.me });
+      if (isCurrent()) {
+        setState({ kind: 'signed-in', me });
+        applyTimezoneDefault(idToken, me, { isCurrent });
+      }
+      return me;
+    } catch (err) {
+      if (err instanceof ConsentOutdatedError && isCurrent()) {
+        setState({ kind: 'signed-in', me: err.me });
+      }
+      throw err;
+    }
+  }, [applyTimezoneDefault]);
+
   const value = useMemo(
-    () => ({ state, signIn, signOut, updateMe }),
-    [state, signIn, signOut, updateMe],
+    () => ({ state, signIn, signOut, updateMe, acceptConsent }),
+    [state, signIn, signOut, updateMe, acceptConsent],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

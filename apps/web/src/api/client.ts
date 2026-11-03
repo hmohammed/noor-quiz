@@ -1,4 +1,9 @@
-import { HealthResponse, MeResponse, type UpdateMeRequestInput } from '@noor/contracts';
+import {
+  HealthResponse,
+  MeResponse,
+  type AcceptConsentRequest,
+  type UpdateMeRequestInput,
+} from '@noor/contracts';
 
 /** Any failure talking to the API: network, non-2xx status, non-JSON body or contract mismatch. */
 export class ApiError extends Error {
@@ -27,6 +32,12 @@ export interface ApiClient {
     body: UpdateMeRequestInput;
     signal?: AbortSignal;
   }): Promise<MeResponse>;
+  /** Records the signed-in user's acceptance of the given consent version and returns `me`. */
+  acceptConsent(init: {
+    idToken: string;
+    body: AcceptConsentRequest;
+    signal?: AbortSignal;
+  }): Promise<MeResponse>;
 }
 
 interface Schema<T> {
@@ -46,7 +57,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     options.fetch ?? ((...args) => globalThis.fetch(...args));
 
   async function request<T>(
-    method: 'GET' | 'PATCH',
+    method: 'GET' | 'PATCH' | 'POST',
     path: string,
     schema: Schema<T>,
     init: CallInit = {},
@@ -96,6 +107,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       request('GET', '/v1/me', MeResponse, { signal, headers: bearer(idToken) }),
     updateMe: ({ idToken, body, signal }) =>
       request('PATCH', '/v1/me', MeResponse, { signal, headers: bearer(idToken), body }),
+    acceptConsent: ({ idToken, body, signal }) =>
+      request('POST', '/v1/me/consent', MeResponse, { signal, headers: bearer(idToken), body }),
   };
 }
 
