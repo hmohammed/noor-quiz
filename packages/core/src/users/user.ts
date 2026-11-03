@@ -1,4 +1,6 @@
 import { DomainError } from '../errors';
+import type { TimeZone } from '../time/zoned';
+import type { Locale } from './profile';
 
 /** Our own user id: a ULID (AGENT.md rule 8). Never a provider uid. */
 export type UserId = string & { readonly __brand: 'UserId' };
@@ -33,6 +35,10 @@ export interface IdentityKey {
 export interface User {
   id: UserId;
   displayName: string | null;
+  /** Chosen UI language; null until the member picks one. */
+  locale: Locale | null;
+  /** IANA zone; null until set (the web defaults it from the browser on first sign-in). */
+  timezone: TimeZone | null;
   /** UTC ISO string from the Clock. */
   createdAt: string;
   /** UTC ISO string from the Clock. */

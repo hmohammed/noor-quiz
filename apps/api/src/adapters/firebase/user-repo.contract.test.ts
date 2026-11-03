@@ -83,6 +83,8 @@ describe('FirestoreUserRepo (emulator only)', () => {
     expect(userRaw).toStrictEqual({
       id: user.id,
       displayName: 'Alice',
+      locale: null,
+      timezone: null,
       createdAt: AT,
       updatedAt: AT,
       schemaVersion: 1,
@@ -120,7 +122,15 @@ describe('FirestoreUserRepo (emulator only)', () => {
     const otherId = '01ARZ3NDEKTSV4RRFFQ69G5FAW' as UserId;
     await expectDomainError(
       repo.createWithIdentity(
-        { id: otherId, displayName: null, createdAt: AT, updatedAt: AT, schemaVersion: 1 },
+        {
+          id: otherId,
+          displayName: null,
+          locale: null,
+          timezone: null,
+          createdAt: AT,
+          updatedAt: AT,
+          schemaVersion: 1,
+        },
         {
           id: 'firebase_uid-alice',
           provider: 'firebase',
@@ -153,5 +163,31 @@ describe('FirestoreUserRepo (emulator only)', () => {
     await db.collection('users').doc(ULID).set(doc);
 
     await expectDomainError(repo.getById(ULID), 'INTERNAL');
+  });
+
+  it('reads a users doc written before T011 (no locale/timezone) as null and can update it', async () => {
+    const legacy = {
+      id: ULID,
+      displayName: 'Alice',
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    };
+    await db.collection('users').doc(ULID).set(legacy);
+
+    expect(await repo.getById(ULID)).toStrictEqual({ ...legacy, locale: null, timezone: null });
+
+    const later = '2026-02-01T00:00:00.000Z';
+    const updated = await repo.updateProfile(ULID, { timezone: 'Africa/Addis_Ababa' }, later);
+
+    expect(updated).toStrictEqual({
+      ...legacy,
+      locale: null,
+      timezone: 'Africa/Addis_Ababa',
+      updatedAt: later,
+    });
+    expect(await repo.getById(ULID)).toStrictEqual(updated);
+    const raw = (await db.collection('users').doc(ULID).get()).data();
+    expect(raw).toStrictEqual({ ...legacy, timezone: 'Africa/Addis_Ababa', updatedAt: later });
   });
 });

@@ -37,6 +37,8 @@ const seeds = {
     data: {
       id: ALICE_USER_ID,
       displayName: 'Alice',
+      locale: null,
+      timezone: null,
       createdAt: AT,
       updatedAt: AT,
       schemaVersion: 1,

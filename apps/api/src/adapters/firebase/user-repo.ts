@@ -4,10 +4,12 @@ import {
   identityId,
   instantFromIso,
   isDomainError,
+  SUPPORTED_LOCALES,
   ULID_PATTERN,
   USER_SCHEMA_VERSION,
   type Identity,
   type IdentityKey,
+  type ProfilePatch,
   type User,
   type UserId,
   type UserRepo,
@@ -33,9 +35,12 @@ const userId = z
   .regex(ULID_PATTERN)
   .transform((s) => s as UserId);
 
+// `locale` and `timezone` arrived in T011 without a schema bump: missing keys read as null.
 const UserDoc = z.strictObject({
   id: userId,
   displayName: z.string().nullable(),
+  locale: z.enum(SUPPORTED_LOCALES).nullable().default(null),
+  timezone: z.string().nullable().default(null),
   createdAt: isoString,
   updatedAt: isoString,
   schemaVersion: z.literal(USER_SCHEMA_VERSION),
@@ -56,6 +61,8 @@ function toUserDoc(u: User): User {
   return {
     id: u.id,
     displayName: u.displayName,
+    locale: u.locale,
+    timezone: u.timezone,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
     schemaVersion: u.schemaVersion,
@@ -146,5 +153,23 @@ export class FirestoreUserRepo implements UserRepo {
 
   async getById(id: UserId): Promise<User | null> {
     return (await this.#users.doc(asUserId(id)).get()).data() ?? null;
+  }
+
+  async updateProfile(id: UserId, patch: ProfilePatch, updatedAt: string): Promise<User> {
+    const ref = this.#users.doc(asUserId(id));
+    // Named keys only, so nothing outside the profile fields can reach the doc.
+    const updates: Partial<Pick<User, 'displayName' | 'locale' | 'timezone' | 'updatedAt'>> = {
+      updatedAt,
+    };
+    if (patch.displayName !== undefined) updates.displayName = patch.displayName;
+    if (patch.locale !== undefined) updates.locale = patch.locale;
+    if (patch.timezone !== undefined) updates.timezone = patch.timezone;
+
+    return this.#db.runTransaction(async (tx) => {
+      const current = (await tx.get(ref)).data();
+      if (!current) throw new DomainError('NOT_FOUND', { reason: 'user-not-found' });
+      tx.update(ref, updates);
+      return toUserDoc({ ...current, ...updates });
+    });
   }
 }

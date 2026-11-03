@@ -19,7 +19,7 @@ function echoApp() {
 }
 
 describe('requireUser', () => {
-  it('sets c.var.user to exactly { id, displayName }, with no email or subject', async () => {
+  it('sets c.var.user to exactly { id, displayName, locale, timezone }, with no email or subject', async () => {
     const { app, deps } = echoApp();
     const token = deps.auth.issue({
       provider: 'firebase',
@@ -35,7 +35,12 @@ describe('requireUser', () => {
 
     expect(res.status).toBe(200);
     const stored = await deps.users.getByIdentity({ provider: 'firebase', subject: 'uid-alice' });
-    expect(await res.json()).toStrictEqual({ id: stored?.id, displayName: 'Alice' });
+    expect(await res.json()).toStrictEqual({
+      id: stored?.id,
+      displayName: 'Alice',
+      locale: null,
+      timezone: null,
+    });
   });
 
   it('does not call the handler without a valid token', async () => {

@@ -15,7 +15,8 @@ import {
 
 /**
  * Returns our user for a verified identity, creating the user and identity on first
- * sight. Later calls return the stored user unchanged (profile sync is T011).
+ * sight. Later calls return the stored user unchanged: sign-in never overwrites the
+ * profile the member edits with `updateProfile`.
  */
 export async function getOrCreateUser(
   deps: { clock: Clock; ids: IdGenerator; users: UserRepo },
@@ -32,6 +33,8 @@ export async function getOrCreateUser(
   const user: User = {
     id: userId,
     displayName: normaliseDisplayName(input.name),
+    locale: null,
+    timezone: null,
     createdAt: now,
     updatedAt: now,
     schemaVersion: USER_SCHEMA_VERSION,

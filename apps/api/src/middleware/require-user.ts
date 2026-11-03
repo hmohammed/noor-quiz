@@ -20,7 +20,12 @@ export function requireUser(): MiddlewareHandler<AppEnv> {
     const deps = c.var.deps;
     const identity = await deps.auth.verify(token);
     const user = await getOrCreateUser(deps, identity);
-    c.set('user', { id: user.id, displayName: user.displayName });
+    c.set('user', {
+      id: user.id,
+      displayName: user.displayName,
+      locale: user.locale,
+      timezone: user.timezone,
+    });
     await next();
   };
 }

@@ -1,3 +1,4 @@
+import type { ProfilePatch } from '../users/profile';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
 
 /**
@@ -5,7 +6,9 @@ import type { Identity, IdentityKey, User, UserId } from '../users/user';
  * design. A person is one user across every tenant, so AGENT.md rule 4 does not apply.
  *
  * Doc shapes:
- * - `users/{userId}` (ULID): `{ id, displayName, createdAt, updatedAt, schemaVersion: 1 }`
+ * - `users/{userId}` (ULID): `{ id, displayName, locale, timezone, createdAt, updatedAt,
+ *   schemaVersion: 1 }`. `locale` and `timezone` are nullable and were added in T011;
+ *   readers treat a missing key as null.
  * - `identities/{provider}_{subject}`: `{ id, provider, subject, userId, email,
  *   emailVerified, createdAt, schemaVersion: 1 }`. The deterministic id is what makes
  *   one identity map to exactly one user.
@@ -24,4 +27,9 @@ export interface UserRepo {
    */
   createWithIdentity(user: User, identity: Identity): Promise<User>;
   getById(userId: UserId): Promise<User | null>;
+  /**
+   * Applies only the keys present in `patch` plus `updatedAt`, returns the stored user.
+   * Throws NOT_FOUND for an unknown user, VALIDATION for a non-ULID id.
+   */
+  updateProfile(userId: UserId, patch: ProfilePatch, updatedAt: string): Promise<User>;
 }

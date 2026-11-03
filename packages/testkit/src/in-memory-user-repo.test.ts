@@ -14,7 +14,15 @@ describe('InMemoryUserRepo', () => {
     const id = '01ARZ3NDEKTSV4RRFFQ69G5FAV' as UserId;
     const at = '2026-01-01T00:00:00.000Z';
     const created = await repo.createWithIdentity(
-      { id, displayName: 'Alice', createdAt: at, updatedAt: at, schemaVersion: 1 },
+      {
+        id,
+        displayName: 'Alice',
+        locale: null,
+        timezone: null,
+        createdAt: at,
+        updatedAt: at,
+        schemaVersion: 1,
+      },
       {
         id: 'firebase_uid-alice',
         provider: 'firebase',
@@ -34,5 +42,9 @@ describe('InMemoryUserRepo', () => {
     if (byIdentity) byIdentity.displayName = 'Trudy';
 
     expect((await repo.getById(id))?.displayName).toBe('Alice');
+
+    const updated = await repo.updateProfile(id, { displayName: 'Åsa' }, at);
+    updated.displayName = 'Mallory';
+    expect((await repo.getById(id))?.displayName).toBe('Åsa');
   });
 });

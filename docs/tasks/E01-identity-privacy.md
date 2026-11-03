@@ -138,7 +138,10 @@ Skills: `api-endpoint`, `i18n-rtl`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- For T013/T061/T080: `users/{userId}` now carries `locale` (`en|sv|ar|am|so` or null) and `timezone` (IANA or null), still `schemaVersion: 1`; docs written before T011 read both as null.
+- `useSession()` (`apps/web/src/features/auth/session-context.tsx`) is the one shared session: `state`, `signIn`, `signOut`, `updateMe(patch)`. The header and `/profile` live under `AppLayout`.
+- The profile saves `locale`, but nothing switches the UI language yet — that is T080 (`useI18n()`, `<html lang/dir>`).
+- `PATCH /v1/me` has no rate limit; a `rateLimit` middleware needs its own store/port and a follow-up task.
 
 ## T012
 
