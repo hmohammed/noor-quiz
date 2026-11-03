@@ -30,7 +30,7 @@ Skills: `api-endpoint`, `firestore-data`, `vertical-slice`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+Extend `deleteAccount` from T013c: anonymise this user's answers by dropping `userId` and keeping scores for aggregates.
 
 ## T041
 
