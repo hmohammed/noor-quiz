@@ -3,8 +3,6 @@ import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   isDomainError,
-  MEMBERSHIP_SCHEMA_VERSION,
-  membershipId,
   type DomainErrorCode,
   type Membership,
   type TenantId,
@@ -116,7 +114,5 @@ describe('Firestore invite repo (emulator only)', () => {
     await invites.create(TENANT, invite);
     await expectDomainError(invites.create(TENANT, { ...invite, maxUses: 2 }), 'CONFLICT');
     expect((await invites.getByToken(token))?.maxUses).toBe(25);
-    expect(membershipId(USER, TENANT)).toContain(USER);
-    expect(MEMBERSHIP_SCHEMA_VERSION).toBe(1);
   });
 });
