@@ -25,6 +25,7 @@ export function requireUser(): MiddlewareHandler<AppEnv> {
       displayName: user.displayName,
       locale: user.locale,
       timezone: user.timezone,
+      consentVersion: user.consent?.version ?? null,
     });
     await next();
   };

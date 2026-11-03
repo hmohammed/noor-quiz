@@ -68,7 +68,22 @@ export type UpdateMeRequest = z.infer<typeof UpdateMeRequest>;
 /** What a client sends. */
 export type UpdateMeRequestInput = z.input<typeof UpdateMeRequest>;
 
-/** Body of `GET /v1/me` and `PATCH /v1/me`. Strict, so a leaked `uid`, `subject` or `email` fails validation. */
+/** Body of `POST /v1/me/consent`. Strict: the server sets `acceptedAt` and the user. */
+export const AcceptConsentRequest = z.strictObject({ version: z.string().min(1).max(32) });
+export type AcceptConsentRequest = z.infer<typeof AcceptConsentRequest>;
+
+/** Consent state as the server computes it. Never carries `acceptedAt`. */
+export const MeConsent = z.strictObject({
+  currentVersion: z.string(),
+  acceptedVersion: z.string().nullable(),
+  required: z.boolean(),
+});
+export type MeConsent = z.infer<typeof MeConsent>;
+
+/**
+ * Body of `GET /v1/me`, `PATCH /v1/me` and `POST /v1/me/consent`. Strict, so a leaked
+ * `uid`, `subject` or `email` fails validation.
+ */
 export const MeResponse = z.strictObject({
   userId: Ulid,
   // Lax on purpose: names stored from Google tokens (T010) may hold emoji.
@@ -79,5 +94,6 @@ export const MeResponse = z.strictObject({
     .max(TZ_MAX)
     .refine((tz) => resolveTimeZone(tz) !== null)
     .nullable(),
+  consent: MeConsent,
 });
 export type MeResponse = z.infer<typeof MeResponse>;
