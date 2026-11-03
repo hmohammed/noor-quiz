@@ -279,3 +279,90 @@ describe('apiClient.deleteMe', () => {
     expect(fetch.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
   });
 });
+
+const community = (overrides: Record<string, unknown> = {}) => ({
+  tenantId: ULID,
+  name: 'Masjid Al-Noor',
+  slug: 'masjid-al-noor',
+  timezone: 'Europe/Stockholm',
+  role: 'owner',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  ...overrides,
+});
+
+describe('apiClient.createCommunity', () => {
+  it('sends POST /v1/communities with the bearer token and returns the parsed body', async () => {
+    const fetch = fakeFetch(json(community()));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(
+      client.createCommunity({
+        idToken: 'tok.en.value',
+        body: { name: 'Masjid Al-Noor', timezone: 'Europe/Stockholm' },
+      }),
+    ).resolves.toEqual(community());
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe('http://api.test/v1/communities');
+    expect(init?.method).toBe('POST');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(headers.get('content-type')).toBe('application/json');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: 'Masjid Al-Noor',
+      timezone: 'Europe/Stockholm',
+    });
+  });
+
+  it('throws ApiError when the body breaks the contract', async () => {
+    const client = createApiClient({ fetch: fakeFetch(json(community({ createdBy: ULID }))) });
+    await expect(
+      client.createCommunity({ idToken: 't', body: { name: 'Masjid Al-Noor', timezone: 'UTC' } }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('throws ApiError with status 400 on a 400 response', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ error: { code: 'VALIDATION', message: 'Invalid request' } }, 400)),
+    });
+    const err = await client
+      .createCommunity({ idToken: 't', body: { name: 'A', timezone: 'UTC' } })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(400);
+  });
+});
+
+describe('apiClient.listMyCommunities', () => {
+  it('sends GET /v1/me/communities with the bearer token and returns the parsed body', async () => {
+    const fetch = fakeFetch(json({ communities: [community()] }));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(client.listMyCommunities({ idToken: 'tok.en.value' })).resolves.toEqual({
+      communities: [community()],
+    });
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe('http://api.test/v1/me/communities');
+    expect(init?.method ?? 'GET').toBe('GET');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('throws ApiError when a community leaks createdBy', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ communities: [community({ createdBy: ULID })] })),
+    });
+    await expect(client.listMyCommunities({ idToken: 't' })).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('throws ApiError with status 401 on a 401 response', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ error: { code: 'UNAUTHENTICATED' } }, 401)),
+    });
+    const err = await client.listMyCommunities({ idToken: 't' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(401);
+  });
+});

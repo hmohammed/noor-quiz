@@ -1,7 +1,10 @@
 import {
+  CommunityResponse,
   HealthResponse,
   MeResponse,
+  MyCommunitiesResponse,
   type AcceptConsentRequest,
+  type CreateCommunityRequestInput,
   type UpdateMeRequestInput,
 } from '@noor/contracts';
 
@@ -40,6 +43,17 @@ export interface ApiClient {
   }): Promise<MeResponse>;
   /** Deletes the signed-in account. Resolves on 204 and never reads a body. */
   deleteMe(init: { idToken: string; signal?: AbortSignal }): Promise<void>;
+  /** Creates a community owned by the signed-in user. */
+  createCommunity(init: {
+    idToken: string;
+    body: CreateCommunityRequestInput;
+    signal?: AbortSignal;
+  }): Promise<CommunityResponse>;
+  /** Communities the signed-in user belongs to. */
+  listMyCommunities(init: {
+    idToken: string;
+    signal?: AbortSignal;
+  }): Promise<MyCommunitiesResponse>;
 }
 
 interface Schema<T> {
@@ -123,6 +137,17 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     deleteMe: async ({ idToken, signal }) => {
       await send('DELETE', '/v1/me', { signal, headers: bearer(idToken) });
     },
+    createCommunity: ({ idToken, body, signal }) =>
+      request('POST', '/v1/communities', CommunityResponse, {
+        signal,
+        headers: bearer(idToken),
+        body,
+      }),
+    listMyCommunities: ({ idToken, signal }) =>
+      request('GET', '/v1/me/communities', MyCommunitiesResponse, {
+        signal,
+        headers: bearer(idToken),
+      }),
   };
 }
 
