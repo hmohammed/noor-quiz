@@ -7,7 +7,7 @@ description: Run the Noor Quiz software factory. Picks READY tasks from docs/tas
 
 The session that runs this skill is the **orchestrator**. It picks tasks, spawns every agent, opens a GitHub pull request for approved work, and is the **only writer** of `factory/board.json` and of the Status/Owner columns in `docs/tasks/BOARD.md`. Agents get their context from files, never from this conversation, and each one writes only its own file.
 
-Source of truth: `AGENT.md` (hard rules, commands, Definition of Done) and `docs/tasks/BOARD.md` (the backlog). AGENT.md "Out of bounds" applies to every agent: **never deploy, never touch production projects, Stripe live mode or secrets, never force anything.** Only the orchestrator pushes, and only `factory/<id>-<slug>` (and `factory/split-<id>`) branches. Nobody in the factory commits to, pushes to, or merges into `main`: a human merges every PR on GitHub.
+Source of truth: `AGENT.md` (hard rules, commands, Definition of Done) and `docs/tasks/BOARD.md` (the backlog). The dashboard is `factory/dashboard.html`. Its Dependencies link (`#deps`) draws that backlog: an arrow means the task on the left must be done before the task on the right. It opens on the current phase. A done task is drawn only when it directly unblocks something still open, and a closed phase gate is its own node. AGENT.md "Out of bounds" applies to every agent: **never deploy, never touch production projects, Stripe live mode or secrets, never force anything.** Only the orchestrator pushes, and only `factory/<id>-<slug>` (and `factory/split-<id>`) branches. Nobody in the factory commits to, pushes to, or merges into `main`: a human merges every PR on GitHub.
 
 ## Commands
 
