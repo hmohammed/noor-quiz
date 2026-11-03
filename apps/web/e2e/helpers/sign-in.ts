@@ -1,4 +1,29 @@
-import type { Page, Response } from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
+
+const isGetMe = (res: Response) =>
+  new URL(res.url()).pathname === '/v1/me' && res.request().method() === 'GET';
+
+/**
+ * Accepts the current consent through the real `POST /v1/me/consent`, with the signed-in
+ * user's own token taken from their `GET /v1/me`, then reloads so the app sees it.
+ * Resolves with the `GET /v1/me` response after the reload. Never logs the header or
+ * token. T013b replaces this with the consent screen.
+ */
+export async function acceptConsentViaApi(page: Page, meResponse: Response): Promise<Response> {
+  const authorization = (await meResponse.request().allHeaders())['authorization'];
+  expect(authorization, 'GET /v1/me carried an Authorization header').toBeTruthy();
+  const body = (await meResponse.json()) as { consent: { currentVersion: string } };
+
+  const accepted = await page.request.post('/v1/me/consent', {
+    headers: { authorization: authorization as string },
+    data: { version: body.consent.currentVersion },
+  });
+  expect(accepted.status()).toBe(200);
+
+  const reloaded = page.waitForResponse(isGetMe);
+  await page.reload();
+  return reloaded;
+}
 
 /**
  * Signs in a fresh account through the Auth emulator's Google popup, starting from
@@ -26,9 +51,7 @@ export async function signInWithEmulator(
   await popup.getByLabel('Email').fill(email);
   await popup.getByLabel('Display name').fill(displayName);
 
-  const meResponse = page.waitForResponse(
-    (res) => new URL(res.url()).pathname === '/v1/me' && res.request().method() === 'GET',
-  );
+  const meResponse = page.waitForResponse(isGetMe);
   await popup.getByRole('button', { name: 'Sign in with Google.com' }).click();
   return meResponse;
 }

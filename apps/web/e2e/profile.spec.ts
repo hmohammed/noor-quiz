@@ -1,5 +1,5 @@
 import { expect, test, type Request } from '@playwright/test';
-import { signInWithEmulator } from './helpers/sign-in';
+import { acceptConsentViaApi, signInWithEmulator } from './helpers/sign-in';
 
 const isPatchMe = (req: Request) =>
   new URL(req.url()).pathname === '/v1/me' && req.method() === 'PATCH';
@@ -16,11 +16,13 @@ test.describe('profile', () => {
     });
 
     await page.goto('/');
-    const patched = page.waitForResponse((res) => isPatchMe(res.request()));
-    await signInWithEmulator(page, {
+    const me = await signInWithEmulator(page, {
       displayName: 'Tz E2E',
       email: `e2e-tz-${Date.now()}@example.com`,
     });
+    // No PATCH fires while consent is required; the default runs after it is accepted.
+    const patched = page.waitForResponse((res) => isPatchMe(res.request()));
+    await acceptConsentViaApi(page, me);
     expect((await patched).status()).toBe(200);
     expect(patches).toHaveLength(1);
     expect(patches[0]?.postDataJSON()).toEqual({ timezone: 'Africa/Addis_Ababa' });
@@ -32,10 +34,11 @@ test.describe('profile', () => {
 
   test('change my name to ሀሰን and see it in the header, also after reload', async ({ page }) => {
     await page.goto('/');
-    await signInWithEmulator(page, {
+    const me = await signInWithEmulator(page, {
       displayName: 'Name E2E',
       email: `e2e-name-${Date.now()}@example.com`,
     });
+    await acceptConsentViaApi(page, me);
     await expect(page.getByTestId('auth-name')).toHaveText('Name E2E');
 
     await page.getByRole('link', { name: 'Profile' }).click();

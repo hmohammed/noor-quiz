@@ -17,6 +17,7 @@ const me = (overrides: Record<string, unknown> = {}) => ({
   displayName: null,
   locale: null,
   timezone: null,
+  consent: { currentVersion: '2026-11-01', acceptedVersion: null, required: true },
   ...overrides,
 });
 
@@ -120,6 +121,13 @@ describe('apiClient.getMe', () => {
     const client = createApiClient({
       fetch: fakeFetch(json(me({ displayName: 'Amina', uid: 'firebase-uid' }))),
     });
+    await expect(client.getMe({ idToken: 't' })).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('throws ApiError when the body has no consent block (strict contract)', async () => {
+    const withoutConsent: Record<string, unknown> = me();
+    delete withoutConsent.consent;
+    const client = createApiClient({ fetch: fakeFetch(json(withoutConsent)) });
     await expect(client.getMe({ idToken: 't' })).rejects.toBeInstanceOf(ApiError);
   });
 
