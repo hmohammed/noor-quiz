@@ -177,12 +177,12 @@ function SeasonsEditor({
         setSeasons(res.seasons);
         setStatus('idle');
       },
-      () => setStatus('error'),
+      () => setStatus('list-error'),
     );
   };
 
   const handleSubmit = () => {
-    if (status === 'saving' || status === 'suggesting') return;
+    if (status === 'saving' || status === 'suggesting' || status === 'list-error') return;
     const lengthDays = values.lengthDays.trim() === '' ? Number.NaN : Number(values.lengthDays);
     const parsed = CreateSeasonRequest.safeParse({ ...values, lengthDays });
     if (!parsed.success) {
@@ -202,17 +202,23 @@ function SeasonsEditor({
   const handleSuggest = () => {
     if (status === 'saving' || status === 'suggesting') return;
     if (values.timezone === '') {
-      setStatus('invalid');
+      if (status !== 'list-error') setStatus('invalid');
       return;
     }
+    const returnToListError = status === 'list-error';
     setStatus('suggesting');
     suggestRamadanStart(tenantId, values.timezone).then(
       (suggestion) => {
         setValues((current) => applyRamadanSuggestion(current, suggestion));
-        setStatus('idle');
+        setStatus(returnToListError ? 'list-error' : 'idle');
       },
       () => setStatus('suggest-error'),
     );
+  };
+
+  const leaveStatus = () => {
+    if (status !== 'saving' && status !== 'suggesting' && status !== 'list-error')
+      setStatus('idle');
   };
 
   return (
@@ -221,31 +227,31 @@ function SeasonsEditor({
       timeZones={timeZones}
       onNameChange={(name) => {
         setValues((current) => ({ ...current, name }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onKindChange={(kind) => {
         setValues((current) => ({ ...current, kind }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onTimezoneChange={(timezone) => {
         setValues((current) => ({ ...current, timezone }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onStartDateChange={(startDate) => {
         setValues((current) => ({ ...current, startDate }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onLengthChange={(lengthDays) => {
         setValues((current) => ({ ...current, lengthDays }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onOpensChange={(opensAtLocal) => {
         setValues((current) => ({ ...current, opensAtLocal }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onClosesChange={(closesAtLocal) => {
         setValues((current) => ({ ...current, closesAtLocal }));
-        if (status !== 'saving' && status !== 'suggesting') setStatus('idle');
+        leaveStatus();
       }}
       onSubmit={handleSubmit}
       onSuggest={handleSuggest}

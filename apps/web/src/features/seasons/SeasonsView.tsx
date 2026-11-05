@@ -13,7 +13,7 @@ export interface SeasonFormValues {
 }
 
 export type SeasonFormStatus =
-  'idle' | 'saving' | 'suggesting' | 'invalid' | 'error' | 'suggest-error';
+  'idle' | 'saving' | 'suggesting' | 'invalid' | 'error' | 'suggest-error' | 'list-error';
 
 export type SeasonsViewState =
   | { kind: 'loading' }
@@ -138,6 +138,7 @@ export function SeasonsView({
   const showForm = canCreate(role);
   const saving = status === 'saving';
   const suggesting = status === 'suggesting';
+  const listError = status === 'list-error';
   const busy = saving || suggesting;
   const zones =
     values.timezone === '' || timeZones.includes(values.timezone)
@@ -153,7 +154,9 @@ export function SeasonsView({
     <main className="page">
       {title}
       {seasons.length === 0 ? (
-        <p className="season__status">{t('season.empty')}</p>
+        listError ? null : (
+          <p className="season__status">{t('season.empty')}</p>
+        )
       ) : (
         <ul className="season__list">
           {seasons.map((season) => (
@@ -161,8 +164,8 @@ export function SeasonsView({
               <span className="season__name" dir="auto">
                 {season.name}
               </span>
-              <span className="season__meta" dir="ltr">
-                {season.startDate}
+              <span className="season__meta">
+                <bdi dir="ltr">{season.startDate}</bdi>
               </span>
               <span className="season__meta">{stateLabel(season.state)}</span>
             </li>
@@ -289,7 +292,11 @@ export function SeasonsView({
             </div>
           )}
           <div className="season__actions">
-            <button type="submit" className="auth__button" disabled={busy || undefined}>
+            <button
+              type="submit"
+              className="auth__button"
+              disabled={busy || listError || undefined}
+            >
               {saving ? t('season.saving') : t('season.create')}
             </button>
             {status === 'invalid' && (
@@ -301,6 +308,16 @@ export function SeasonsView({
               <p role="alert" className="season__error">
                 {t('season.error.save')}
               </p>
+            )}
+            {listError && (
+              <>
+                <p role="alert" className="season__error">
+                  {t('season.error.created')}
+                </p>
+                <button type="button" className="auth__button" onClick={onRetry}>
+                  {t('season.retry')}
+                </button>
+              </>
             )}
             {status === 'suggest-error' && (
               <p role="alert" className="season__error">

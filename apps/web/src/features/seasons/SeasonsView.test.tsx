@@ -65,7 +65,36 @@ describe('SeasonsView', () => {
     expect(html).toContain('Ramadan 1448');
     expect(html).toContain(en['season.state.upcoming']);
     expect(html).toMatch(/<span class="season__name" dir="auto">/);
+    expect(html).toContain('<span class="season__meta"><bdi dir="ltr">2035-01-01</bdi></span>');
+    expect(html).not.toMatch(/<span class="season__meta" dir="ltr">/);
     expect(html).not.toContain('<form');
+  });
+
+  it('labels an open season as active day and the number', () => {
+    const html = render({
+      kind: 'ready',
+      role: 'member',
+      status: 'idle',
+      values: VALUES,
+      seasons: [{ ...season, state: { phase: 'active', dayIndex: 5, open: true } }],
+    });
+    expect(html).toContain(`${en['season.state.active']} 5`);
+    expect(html).toContain('Active, day 5');
+  });
+
+  it('created but the list failed: a different alert, no empty line, and Create is disabled', () => {
+    const html = render({
+      kind: 'ready',
+      role: 'admin',
+      status: 'list-error',
+      values: VALUES,
+      seasons: [],
+    });
+    expect(html).toContain(en['season.error.created']);
+    expect(html).not.toContain(en['season.error.save']);
+    expect(html).not.toContain(en['season.empty']);
+    expect(html).toContain(en['season.retry']);
+    expect(html).toMatch(/<button type="submit"[^>]*disabled=""[^>]*>/);
   });
 
   it.each(['member', 'scholar-reviewer', 'editor'] as const)(
