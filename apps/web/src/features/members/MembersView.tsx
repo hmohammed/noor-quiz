@@ -193,7 +193,9 @@ export function MembersView({
                         disabled={state.removing || undefined}
                         onClick={() => onRemove?.(member.userId)}
                       >
-                        {state.removing ? t('members.saving') : t('members.remove.confirm')}
+                        {state.removing
+                          ? t('members.remove.removing')
+                          : t('members.remove.confirm')}
                       </button>
                       <button
                         type="button"

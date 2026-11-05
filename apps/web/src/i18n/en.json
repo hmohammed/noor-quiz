@@ -110,6 +110,7 @@
   "members.remove": "Remove",
   "members.remove.confirmPrompt": "Remove this member from the community?",
   "members.remove.confirm": "Remove member",
+  "members.remove.removing": "Removing…",
   "members.remove.cancel": "Cancel",
   "members.error.save": "Could not change the role. Please try again.",
   "members.error.remove": "Could not remove the member. Please try again.",

@@ -180,6 +180,17 @@ describe('MembersView', () => {
     expect(onRemove).not.toHaveBeenCalled();
     expect(onRemoveStart).not.toHaveBeenCalled();
 
+    const removing = render(
+      ready({
+        actorRole: 'owner',
+        members: [member(ACTOR, 'owner'), member(OTHER, 'member')],
+        confirmRemoveUserId: OTHER,
+        removing: true,
+      }),
+    );
+    expect(removing).toContain(en['members.remove.removing']);
+    expect(removing).not.toContain(en['members.saving']);
+
     const idle = render(
       ready({
         actorRole: 'owner',
