@@ -12,3 +12,15 @@
    - `npm run test:emulator` — 239 passed
    - `npm run test:e2e` — 12 passed, including user A creating an invite and user B joining
 4. Push and open the pull request, then squash-merge it in this repository (AGENT.md).
+
+## CI
+
+`gh pr checks 17` — unit, emulator, and changes passed. e2e failed before any test ran:
+
+```
+BEWARE: your OS is not officially supported by Playwright; installing dependencies for ubuntu26.04-x64 as a fallback.
+Cannot install dependencies for ubuntu26.04-x64 with Playwright 1.51.1!
+Error: ERROR: Playwright does not support chromium on ubuntu26.04-x64
+```
+
+GitHub's runner is Ubuntu 26.04. `@playwright/test` is 1.51.1. Local e2e passed (12 tests) on Windows. This is the install step, not an invite-flow failure.

@@ -86,3 +86,9 @@ Worktree: c:\Users\hassen.mohammed\Desktop\Hobby projects\noor-quiz\.claude\work
 - review-ui.md: the inert row wrapper was not a flex column, so the name, address, role, and Invite button ran on one line → `.community__summary` is a column flex with `gap: var(--space-2)` and `min-inline-size: 0`; the invite panel stays the next sibling (`CommunitiesView.tsx`, `styles.css`) (eb9e2aa)
 - review-security.md / review-ux.md / review-code.md: passed, no changes
 - Nits left as written (invite link colour, duplicated joining label, join name margin)
+
+## Round 4
+- CI e2e: `@playwright/test` 1.51.1 cannot install Chromium on Ubuntu 26.04 → pinned `1.61.0` in `apps/web/package.json` and `package-lock.json` (`@playwright/test`, `playwright`, `playwright-core`). 1.61.0 is the first release with `ubuntu26.04-x64` browser builds (Playwright 1.61 release notes, PR 41025). `playwright.config.ts` is unchanged. (6e8bd7c)
+- Invite behaviour was not changed.
+- Did not re-run the e2e suite. The only change is the Playwright version, and the Windows e2e run already passed on 1.51.1.
+- `npx eslint` on the two JSON files: ignored, no ESLint config for JSON (0 errors). `npx prettier --check --end-of-line auto` on those files: pass. `npm run typecheck`: pass.
