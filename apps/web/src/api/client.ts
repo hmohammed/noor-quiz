@@ -4,11 +4,14 @@ import {
   HealthResponse,
   InvitePreviewResponse,
   MeResponse,
+  MembersResponse,
+  MemberView,
   MyCommunitiesResponse,
   RamadanSuggestionResponse,
   SeasonListResponse,
   SeasonView,
   type AcceptConsentRequest,
+  type ChangeMemberRoleRequestInput,
   type CreateCommunityRequestInput,
   type CreateInviteRequestInput,
   type CreateSeasonRequestInput,
@@ -96,6 +99,29 @@ export interface ApiClient {
     timezone: string;
     signal?: AbortSignal;
   }): Promise<RamadanSuggestionResponse>;
+  /** Members of one community. Admin and owner only. */
+  listMembers(init: {
+    idToken: string;
+    tenantId: string;
+    signal?: AbortSignal;
+  }): Promise<MembersResponse>;
+  /** Proposes a new role. The server decides whether it is allowed. */
+  changeMemberRole(init: {
+    idToken: string;
+    tenantId: string;
+    userId: string;
+    body: ChangeMemberRoleRequestInput;
+    signal?: AbortSignal;
+  }): Promise<MemberView>;
+  /** Removes someone else. Resolves on 204 and never reads a body. */
+  removeMember(init: {
+    idToken: string;
+    tenantId: string;
+    userId: string;
+    signal?: AbortSignal;
+  }): Promise<void>;
+  /** Leaves one community. The body is always empty. Resolves on 204. */
+  leaveCommunity(init: { idToken: string; tenantId: string; signal?: AbortSignal }): Promise<void>;
 }
 
 interface Schema<T> {
@@ -222,6 +248,35 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         RamadanSuggestionResponse,
         { signal, headers: bearer(idToken) },
       ),
+    listMembers: ({ idToken, tenantId, signal }) =>
+      request('GET', `/v1/t/${encodeURIComponent(tenantId)}/members`, MembersResponse, {
+        signal,
+        headers: bearer(idToken),
+      }),
+    changeMemberRole: ({ idToken, tenantId, userId, body, signal }) =>
+      request(
+        'PATCH',
+        `/v1/t/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(userId)}`,
+        MemberView,
+        { signal, headers: bearer(idToken), body },
+      ),
+    removeMember: async ({ idToken, tenantId, userId, signal }) => {
+      await send(
+        'DELETE',
+        `/v1/t/${encodeURIComponent(tenantId)}/members/${encodeURIComponent(userId)}`,
+        {
+          signal,
+          headers: bearer(idToken),
+        },
+      );
+    },
+    leaveCommunity: async ({ idToken, tenantId, signal }) => {
+      await send('POST', `/v1/t/${encodeURIComponent(tenantId)}/leave`, {
+        signal,
+        headers: bearer(idToken),
+        body: {},
+      });
+    },
   };
 }
 

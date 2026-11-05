@@ -70,6 +70,13 @@ function repo(found: Membership | null) {
     get: vi.fn(async () => found),
     listByUser: vi.fn(async () => []),
     deleteByUser: vi.fn(async () => undefined),
+    listByTenant: vi.fn(async () => []),
+    updateRole: vi.fn(async () => {
+      throw new Error('updateRole should not be called');
+    }),
+    remove: vi.fn(async () => {
+      throw new Error('remove should not be called');
+    }),
   } satisfies MembershipRepo;
   return { invites, memberships, create };
 }

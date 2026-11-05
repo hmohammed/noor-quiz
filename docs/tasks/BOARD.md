@@ -37,7 +37,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T013c](E01-identity-privacy.md#t013c) | Delete my account | E01 | T013a | sec | done | factory |
 | [T020](E02-communities.md#t020) | Create a community and list mine | E02 | T013 | sec | done | factory |
 | [T021](E02-communities.md#t021) | Invite link and join | E02 | T020 | sec | done | factory |
-| [T022](E02-communities.md#t022) | Members list and role management | E02 | T021 | sec | todo |  |
+| [T022](E02-communities.md#t022) | Members list and role management | E02 | T021 | sec | done | factory |
 | [T030](E03-seasons-questions.md#t030) | Season rules in core: days, open and close times | E03 | T003 |  | done | factory |
 | [T031](E03-seasons-questions.md#t031) | Create a season for a community | E03 | T030, T020 |  | done | factory |
 | [T032](E03-seasons-questions.md#t032) | Draft multiple-choice questions | E03 | T031 |  | todo |  |

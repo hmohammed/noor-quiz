@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from 'react';
+import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import type { CommunitySummary } from '@noor/contracts';
 import { t } from '../../i18n/t';
 
@@ -10,6 +10,8 @@ export interface CommunityFormValues {
 export type CommunityFormStatus =
   'idle' | 'saving' | 'invalid-name' | 'invalid-timezone' | 'error' | 'list-error';
 
+export type CommunityLeaveError = 'last-owner' | 'generic' | null;
+
 export type CommunitiesViewState =
   | { kind: 'loading' }
   | { kind: 'signed-out' }
@@ -20,6 +22,9 @@ export type CommunitiesViewState =
       status: CommunityFormStatus;
       values: CommunityFormValues;
       communities: readonly CommunitySummary[];
+      confirmLeaveTenantId: string | null;
+      leaving: boolean;
+      leaveError: CommunityLeaveError;
     };
 
 export interface CommunitiesViewProps {
@@ -37,6 +42,12 @@ export interface CommunitiesViewProps {
    */
   inviteFor?: string;
   invitePanel?: ReactNode;
+  /** Start the leave confirm step for this community. */
+  onLeaveStart?(community: CommunitySummary): void;
+  /** Confirm leave for this community. */
+  onLeave?(community: CommunitySummary): void;
+  /** Cancel the leave confirm step. */
+  onLeaveCancel?(): void;
   /** Used by the `signed-out` state. */
   onSignIn?(): void;
   /** Used by the load-error state. */
@@ -58,9 +69,19 @@ export function CommunitiesView({
   onInvite,
   inviteFor,
   invitePanel,
+  onLeaveStart,
+  onLeave,
+  onLeaveCancel,
   onSignIn,
   onRetry,
 }: CommunitiesViewProps) {
+  const cancelLeaveRef = useRef<HTMLButtonElement>(null);
+  const confirmingLeave = state.kind === 'ready' ? state.confirmLeaveTenantId : null;
+
+  useEffect(() => {
+    if (confirmingLeave) cancelLeaveRef.current?.focus();
+  }, [confirmingLeave]);
+
   const locked = inviteFor !== undefined;
   const title = (
     <h1 className="community__title" inert={locked ? true : undefined}>
@@ -111,7 +132,7 @@ export function CommunitiesView({
       break;
   }
 
-  const { status, values, communities } = state;
+  const { status, values, communities, confirmLeaveTenantId, leaving, leaveError } = state;
   const saving = status === 'saving';
   const listError = status === 'list-error';
   const invalidName = status === 'invalid-name';
@@ -129,6 +150,16 @@ export function CommunitiesView({
   return (
     <main className="page">
       {title}
+      {leaveError === 'last-owner' && (
+        <p role="alert" className="community__error">
+          {t('community.leave.lastOwner')}
+        </p>
+      )}
+      {leaveError === 'generic' && (
+        <p role="alert" className="community__error">
+          {t('community.leave.error')}
+        </p>
+      )}
       {communities.length === 0 ? (
         listError ? null : (
           <p className="community__status">{t('community.empty')}</p>
@@ -137,6 +168,8 @@ export function CommunitiesView({
         <ul className="community__list">
           {communities.map((community) => {
             const active = inviteFor === community.tenantId;
+            const confirmingLeave = confirmLeaveTenantId === community.tenantId;
+            const canManageMembers = community.role === 'admin' || community.role === 'owner';
             return (
               <li
                 key={community.tenantId}
@@ -154,6 +187,11 @@ export function CommunitiesView({
                   <a className="season__link" href={`/communities/${community.tenantId}/seasons`}>
                     {t('season.link')}
                   </a>
+                  {canManageMembers && (
+                    <a className="season__link" href={`/communities/${community.tenantId}/members`}>
+                      {t('members.link')}
+                    </a>
+                  )}
                   {(community.role === 'admin' || community.role === 'owner') && (
                     <button
                       type="button"
@@ -162,6 +200,43 @@ export function CommunitiesView({
                     >
                       {t('community.invite')}
                     </button>
+                  )}
+                  {!confirmingLeave && (
+                    <button
+                      type="button"
+                      className="auth__button community__leave"
+                      disabled={leaving || undefined}
+                      onClick={() => onLeaveStart?.(community)}
+                    >
+                      {t('community.leave')}
+                    </button>
+                  )}
+                  {confirmingLeave && (
+                    <div
+                      className="community__leave-confirm"
+                      aria-busy={leaving ? true : undefined}
+                    >
+                      <p>{t('community.leave.confirmPrompt')}</p>
+                      <div className="community__leave-actions">
+                        <button
+                          type="button"
+                          className="community__leave-confirm-button"
+                          disabled={leaving || undefined}
+                          onClick={() => onLeave?.(community)}
+                        >
+                          {leaving ? t('community.leave.leaving') : t('community.leave.confirm')}
+                        </button>
+                        <button
+                          type="button"
+                          className="community__leave-cancel"
+                          ref={cancelLeaveRef}
+                          disabled={leaving || undefined}
+                          onClick={onLeaveCancel}
+                        >
+                          {t('community.leave.cancel')}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
                 {active ? invitePanel : null}

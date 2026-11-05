@@ -3,6 +3,7 @@ import { CommunitiesPage } from './features/communities/CommunitiesPage';
 import { HomePage } from './features/home/HomePage';
 import { JoinPage } from './features/invites/JoinPage';
 import { AppLayout } from './features/layout/AppLayout';
+import { MembersPage } from './features/members/MembersPage';
 import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PRIVACY_PATH } from './features/privacy/policy';
 import { ProfilePage } from './features/profile/ProfilePage';
@@ -16,6 +17,7 @@ export const router = createBrowserRouter([
       { path: '/communities', element: <CommunitiesPage /> },
       { path: '/join/:token', element: <JoinPage /> },
       { path: '/communities/:tenantId/seasons', element: <SeasonsPage /> },
+      { path: '/communities/:tenantId/members', element: <MembersPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: PRIVACY_PATH, element: <PrivacyPage /> },
     ],

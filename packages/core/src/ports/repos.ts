@@ -5,6 +5,7 @@ import type {
   TenantId,
 } from '../communities/community';
 import type { Invite } from '../communities/invite';
+import type { Role } from '../communities/role';
 import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
 import type { CommunitySeason, SeasonId } from '../season/community-season';
@@ -99,8 +100,15 @@ export interface CommunityRepo {
  * by Firestore's automatic index, so no composite index is needed.
  *
  * There is no `setRole` and no public create. Membership writes are the owner row in
- * `CommunityRepo.createWithOwner`, the member row inside `InviteRepo.accept`, and
- * `deleteByUser`.
+ * `CommunityRepo.createWithOwner`, the member row inside `InviteRepo.accept`,
+ * `updateRole`, `remove`, and `deleteByUser`.
+ *
+ * `listByTenant`, `updateRole` and `remove` take `tenantId` first. `updateRole` and
+ * `remove` keep at least one owner: a write that would leave the tenant with zero
+ * owners throws `CONFLICT` (`reason: 'last-owner'`) and writes nothing. The owner
+ * count is the memberships of this `tenantId` whose `role` is `owner`, read in the
+ * same turn as the write. Query `tenantId` only and filter `role` in memory so
+ * Firestore needs no composite index.
  */
 export interface MembershipRepo {
   /** The membership for this tenant and user, or null. Does not reveal other tenants. */
@@ -117,6 +125,31 @@ export interface MembershipRepo {
    * memberships is a success. Idempotent.
    */
   deleteByUser(userId: UserId): Promise<void>;
+  /**
+   * Memberships whose `tenantId` is this tenant. Copies, not the stored objects.
+   * Order is not significant. A non-ULID id throws `VALIDATION` before the read.
+   */
+  listByTenant(tenantId: TenantId): Promise<Membership[]>;
+  /**
+   * Sets `role` and `updatedAt` only. A non-ULID id, a role that fails `isRole`, or
+   * an `updatedAt` that fails `instantFromIso` is `VALIDATION` and writes nothing.
+   * A missing doc is `NOT_FOUND` and does not create one. Demoting the sole owner is
+   * `CONFLICT` (`reason: 'last-owner'`) and writes nothing. Setting `owner` on an
+   * owner succeeds. The stored `updatedAt` is the caller string.
+   */
+  updateRole(
+    tenantId: TenantId,
+    userId: UserId,
+    role: Role,
+    updatedAt: string,
+  ): Promise<Membership>;
+  /**
+   * Deletes that one membership. A non-ULID id is `VALIDATION` and writes nothing.
+   * A missing doc is `NOT_FOUND`. Removing the sole owner is `CONFLICT`
+   * (`reason: 'last-owner'`) and the doc stays. A non-owner can be removed even when
+   * the tenant already has zero owners.
+   */
+  remove(tenantId: TenantId, userId: UserId): Promise<void>;
 }
 
 /**

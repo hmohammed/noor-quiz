@@ -6,3 +6,4 @@ export * from './me';
 export * from './community';
 export * from './invite';
 export * from './season';
+export * from './member';

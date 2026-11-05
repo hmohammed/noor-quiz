@@ -186,6 +186,64 @@ export class InMemoryMembershipRepo implements MembershipRepo {
     }
   }
 
+  async listByTenant(tenantId: TenantId): Promise<Membership[]> {
+    const tid = asTenantId(tenantId);
+    const listed: Membership[] = [];
+    for (const membership of this.#memberships.values()) {
+      if (membership.tenantId === tid) listed.push(copyMembership(membership));
+    }
+    return listed;
+  }
+
+  async updateRole(
+    tenantId: TenantId,
+    userId: UserId,
+    role: Membership['role'],
+    updatedAt: string,
+  ): Promise<Membership> {
+    // No await: the owner count and the write stay in one turn.
+    const tid = asTenantId(tenantId);
+    const uid = asUserId(userId);
+    if (!isRole(role)) throw new DomainError('VALIDATION', { reason: 'invalid-role' });
+    instantFromIso(updatedAt);
+    const id = membershipId(uid, tid);
+    const current = this.#memberships.get(id);
+    if (!current || current.tenantId !== tid || current.userId !== uid) {
+      throw new DomainError('NOT_FOUND', { reason: 'membership-missing' });
+    }
+    if (current.role === 'owner' && role !== 'owner') {
+      let owners = 0;
+      for (const membership of this.#memberships.values()) {
+        if (membership.tenantId === tid && membership.role === 'owner') owners += 1;
+      }
+      if (owners < 2) throw new DomainError('CONFLICT', { reason: 'last-owner' });
+    }
+    const next = copyMembership(current);
+    next.role = role;
+    next.updatedAt = updatedAt;
+    this.#memberships.set(id, next);
+    return copyMembership(next);
+  }
+
+  async remove(tenantId: TenantId, userId: UserId): Promise<void> {
+    // No await: the owner count and the delete stay in one turn.
+    const tid = asTenantId(tenantId);
+    const uid = asUserId(userId);
+    const id = membershipId(uid, tid);
+    const current = this.#memberships.get(id);
+    if (!current || current.tenantId !== tid || current.userId !== uid) {
+      throw new DomainError('NOT_FOUND', { reason: 'membership-missing' });
+    }
+    if (current.role === 'owner') {
+      let owners = 0;
+      for (const membership of this.#memberships.values()) {
+        if (membership.tenantId === tid && membership.role === 'owner') owners += 1;
+      }
+      if (owners < 2) throw new DomainError('CONFLICT', { reason: 'last-owner' });
+    }
+    this.#memberships.delete(id);
+  }
+
   /**
    * Test-only. Inserts a membership (any role) without a community, so middleware
    * tests can require a non-owner and conflict tests can pre-occupy an id. Not part

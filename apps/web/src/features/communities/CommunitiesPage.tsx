@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CreateCommunityRequest, type CommunitySummary, type MeResponse } from '@noor/contracts';
+import { ApiError } from '../../api/client';
 import { useSession, type Session } from '../auth/session-context';
 import { browserTimeZone } from '../auth/timezone-default';
 import { InviteDialog, type InviteDialogState } from '../invites/InviteDialog';
@@ -9,6 +10,7 @@ import {
   type CommunitiesViewState,
   type CommunityFormStatus,
   type CommunityFormValues,
+  type CommunityLeaveError,
 } from './CommunitiesView';
 
 function supportedTimeZones(): readonly string[] {
@@ -56,6 +58,7 @@ export function CommunitiesPage() {
         createCommunity={session.createCommunity}
         listMyCommunities={session.listMyCommunities}
         createInvite={session.createInvite}
+        leaveCommunity={session.leaveCommunity}
       />
     );
   }
@@ -88,12 +91,14 @@ function CommunitiesEditor({
   createCommunity,
   listMyCommunities,
   createInvite,
+  leaveCommunity,
 }: {
   me: MeResponse;
   timeZones: readonly string[];
   createCommunity: Session['createCommunity'];
   listMyCommunities: Session['listMyCommunities'];
   createInvite: Session['createInvite'];
+  leaveCommunity: Session['leaveCommunity'];
 }) {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
@@ -104,6 +109,9 @@ function CommunitiesEditor({
   }));
   const [status, setStatus] = useState<CommunityFormStatus>('idle');
   const [invite, setInvite] = useState<InviteUi>({ kind: 'closed' });
+  const [confirmLeaveTenantId, setConfirmLeaveTenantId] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<CommunityLeaveError>(null);
   const inviteRequest = useRef(0);
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const restoreFocus = useRef(false);
@@ -253,7 +261,15 @@ function CommunitiesEditor({
   return (
     <>
       <CommunitiesView
-        state={{ kind: 'ready', status, values, communities }}
+        state={{
+          kind: 'ready',
+          status,
+          values,
+          communities,
+          confirmLeaveTenantId,
+          leaving,
+          leaveError,
+        }}
         timeZones={timeZones}
         onNameChange={(name) => {
           setValues((current) => ({ ...current, name }));
@@ -266,6 +282,34 @@ function CommunitiesEditor({
         onSubmit={handleSubmit}
         onRetry={refreshList}
         onInvite={openInvite}
+        onLeaveStart={(community) => {
+          if (leaving || invite.kind !== 'closed') return;
+          setConfirmLeaveTenantId(community.tenantId);
+          setLeaveError(null);
+        }}
+        onLeaveCancel={() => {
+          if (leaving) return;
+          setConfirmLeaveTenantId(null);
+          setLeaveError(null);
+        }}
+        onLeave={(community) => {
+          if (leaving) return;
+          setLeaving(true);
+          setLeaveError(null);
+          leaveCommunity(community.tenantId).then(
+            () => {
+              setLeaving(false);
+              setConfirmLeaveTenantId(null);
+              refreshList();
+            },
+            (err) => {
+              setLeaving(false);
+              setLeaveError(
+                err instanceof ApiError && err.status === 409 ? 'last-owner' : 'generic',
+              );
+            },
+          );
+        }}
         inviteFor={invite.kind === 'closed' ? undefined : invite.community.tenantId}
         invitePanel={
           dialog && invite.kind !== 'closed' ? (
