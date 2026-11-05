@@ -12,4 +12,20 @@ Conflicted files:
 - `packages/core/src/index.ts`
 - `packages/core/src/ports/repos.ts`
 
-Keep both the invite exports from T021 and the season exports from this branch. Later commits in this branch may conflict in `apps/api/src/app.ts`, `composition.ts`, `apps/web/src/router.tsx`, `en.json`, `styles.css`, `session-context.tsx`, and `CommunitiesView`. Keep both features. Do not drop invites.
+The builder rebased again and kept both invite and season work. Nineteen files conflicted. New product HEAD after that rebase: `86a7ea4`. Records commit: `05f00c3`.
+
+A later `git fetch origin` and `git rebase origin/main` reported the branch was already up to date with `b3381db` (T021).
+
+## Checks before push
+
+| command | result |
+| --- | --- |
+| npm install | pass (Playwright 1.61.0 already on the branch from T021) |
+| npx eslint . | pass |
+| npx prettier --check --end-of-line auto . | pass |
+| npm run typecheck | pass |
+| npm test | 1318 passed. `tooling/src/docs-commands.test.ts` failed because AGENT.md is CRLF on this Windows checkout. Known local issue, not a product failure. |
+| npm run test:emulator | pass, 268 tests |
+| npm run test:e2e | first run failed because Chromium for Playwright 1.61.0 was not installed locally. After `npx playwright install chromium`, 14 passed, including both season specs and the invite spec. Emulators and Vite were stopped afterwards. |
+
+No product failure. The branch was not sent back to the builder.
