@@ -105,6 +105,14 @@ function CommunitiesEditor({
   const [status, setStatus] = useState<CommunityFormStatus>('idle');
   const [invite, setInvite] = useState<InviteUi>({ kind: 'closed' });
   const inviteRequest = useRef(0);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const restoreFocus = useRef(false);
+
+  useEffect(() => {
+    if (invite.kind !== 'closed' || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    openerRef.current?.focus();
+  }, [invite]);
 
   useEffect(() => {
     let cancelled = false;
@@ -182,7 +190,14 @@ function CommunitiesEditor({
     );
   };
 
-  function openInvite(community: CommunitySummary) {
+  function closeInvite() {
+    restoreFocus.current = true;
+    inviteRequest.current += 1;
+    setInvite({ kind: 'closed' });
+  }
+
+  function beginInvite(community: CommunitySummary, opener: HTMLButtonElement) {
+    openerRef.current = opener;
     const id = inviteRequest.current + 1;
     inviteRequest.current = id;
     setInvite({ kind: 'loading', community });
@@ -202,6 +217,11 @@ function CommunitiesEditor({
         setInvite({ kind: 'error', community });
       },
     );
+  }
+
+  function openInvite(community: CommunitySummary, opener: HTMLButtonElement) {
+    if (invite.kind !== 'closed') return;
+    beginInvite(community, opener);
   }
 
   async function copyLink() {
@@ -246,22 +266,25 @@ function CommunitiesEditor({
         onSubmit={handleSubmit}
         onRetry={refreshList}
         onInvite={openInvite}
+        inviteFor={invite.kind === 'closed' ? undefined : invite.community.tenantId}
+        invitePanel={
+          dialog && invite.kind !== 'closed' ? (
+            <InviteDialog
+              communityName={invite.community.name}
+              state={dialog}
+              onClose={closeInvite}
+              onRetry={() => {
+                const opener = openerRef.current;
+                if (invite.kind !== 'error' || !opener) return;
+                beginInvite(invite.community, opener);
+              }}
+              onCopy={() => {
+                void copyLink();
+              }}
+            />
+          ) : null
+        }
       />
-      {dialog && (
-        <InviteDialog
-          state={dialog}
-          onClose={() => {
-            inviteRequest.current += 1;
-            setInvite({ kind: 'closed' });
-          }}
-          onRetry={() => {
-            if (invite.kind === 'error') openInvite(invite.community);
-          }}
-          onCopy={() => {
-            void copyLink();
-          }}
-        />
-      )}
     </>
   );
 }

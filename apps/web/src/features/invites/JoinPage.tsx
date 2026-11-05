@@ -38,8 +38,9 @@ export function JoinPage() {
       },
       (err: unknown) => {
         if (cancelled) return;
-        if (err instanceof ApiError && err.status === 404) setPreview({ kind: 'not-found' });
-        else if (err instanceof ApiError && err.status === 410) setPreview({ kind: 'gone' });
+        if (err instanceof ApiError && (err.status === 404 || err.status === 400)) {
+          setPreview({ kind: 'not-found' });
+        } else if (err instanceof ApiError && err.status === 410) setPreview({ kind: 'gone' });
         else setPreview({ kind: 'error' });
       },
     );
@@ -88,23 +89,20 @@ export function JoinPage() {
       state={viewState(preview, phase, session.state.kind)}
       onJoin={onJoin}
       onRetry={onRetry}
+      onSignIn={() => session.signIn()}
     />
   );
 }
 
 function viewState(preview: Preview, phase: Phase, sessionKind: string): JoinViewState {
   if (typeof phase === 'object') return { kind: 'joined', name: phase.name };
-  if (
-    preview.kind === 'loading' ||
-    (preview.kind === 'ready' && sessionKind === 'loading' && phase === 'idle')
-  ) {
-    return { kind: 'loading' };
-  }
   if (preview.kind === 'not-found') return { kind: 'not-found' };
   if (preview.kind === 'gone') return { kind: 'gone' };
-  if (preview.kind === 'error' || phase === 'error' || sessionKind === 'error')
-    return { kind: 'error' };
+  if (preview.kind === 'loading') return { kind: 'loading' };
+  if (preview.kind === 'error' || phase === 'error') return { kind: 'error' };
   if (phase === 'joining') return { kind: 'joining', name: preview.name };
+  if (sessionKind === 'loading') return { kind: 'signing-in', name: preview.name };
+  if (sessionKind === 'error') return { kind: 'sign-in-failed', name: preview.name };
   if (sessionKind === 'signed-out' || sessionKind === 'unavailable') {
     return { kind: 'signed-out', name: preview.name };
   }

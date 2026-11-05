@@ -6,6 +6,8 @@ export type JoinViewState =
   | { kind: 'gone' }
   | { kind: 'error' }
   | { kind: 'signed-out'; name: string }
+  | { kind: 'signing-in'; name: string }
+  | { kind: 'sign-in-failed'; name: string }
   | { kind: 'preview'; name: string }
   | { kind: 'joining'; name: string }
   | { kind: 'joined'; name: string };
@@ -14,6 +16,8 @@ export interface JoinViewProps {
   state: JoinViewState;
   onJoin(): void;
   onRetry(): void;
+  /** Try again after a failed sign-in. Calls `signIn()`, not a preview refetch. */
+  onSignIn?(): void;
 }
 
 function Name({ name }: { name: string }) {
@@ -25,7 +29,7 @@ function Name({ name }: { name: string }) {
 }
 
 /** Join page states. The community name uses dir="auto". No hard-coded copy. */
-export function JoinView({ state, onJoin, onRetry }: JoinViewProps) {
+export function JoinView({ state, onJoin, onRetry, onSignIn }: JoinViewProps) {
   const title = <h1 className="join__title">{t('join.title')}</h1>;
 
   if (state.kind === 'loading') {
@@ -66,6 +70,36 @@ export function JoinView({ state, onJoin, onRetry }: JoinViewProps) {
           {t('join.error')}
         </p>
         <button type="button" className="auth__button" onClick={onRetry}>
+          {t('join.retry')}
+        </button>
+      </main>
+    );
+  }
+  if (state.kind === 'signing-in') {
+    return (
+      <main className="page">
+        {title}
+        <Name name={state.name} />
+        <p role="status" className="join__status">
+          {t('auth.loading')}
+        </p>
+        <div className="join__actions">
+          <button type="button" className="auth__button" disabled>
+            {t('join.join')}
+          </button>
+        </div>
+      </main>
+    );
+  }
+  if (state.kind === 'sign-in-failed') {
+    return (
+      <main className="page">
+        {title}
+        <Name name={state.name} />
+        <p role="alert" className="join__error">
+          {t('auth.error')}
+        </p>
+        <button type="button" className="auth__button" onClick={onSignIn}>
           {t('join.retry')}
         </button>
       </main>

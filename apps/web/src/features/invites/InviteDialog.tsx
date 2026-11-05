@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { inviteQrDataUrl } from './invite-qr';
 import { t } from '../../i18n/t';
 
@@ -13,6 +14,7 @@ export type InviteDialogState =
     };
 
 export interface InviteDialogProps {
+  communityName: string;
   state: InviteDialogState;
   onClose(): void;
   onRetry(): void;
@@ -29,13 +31,45 @@ function formatExpiry(expiresAt: string, timeZone: string): string {
   }).format(new Date(expiresAt));
 }
 
-/** Invite link, copy control and a QR drawn in the browser. */
-export function InviteDialog({ state, onClose, onRetry, onCopy }: InviteDialogProps) {
+/**
+ * Inline invite panel in the community row, same idea as profile delete: not a modal.
+ * When the link is ready, focus moves to it. Escape closes. The page around it is inert.
+ */
+export function InviteDialog({
+  communityName,
+  state,
+  onClose,
+  onRetry,
+  onCopy,
+}: InviteDialogProps) {
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const readyUrl = state.kind === 'ready' ? state.url : null;
+
+  useEffect(() => {
+    if (!readyUrl) return;
+    linkRef.current?.focus();
+    panelRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [readyUrl]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <section className="invite-dialog" role="dialog" aria-modal="true" aria-labelledby={TITLE_ID}>
+    <section className="invite-dialog" aria-labelledby={TITLE_ID} ref={panelRef}>
       <h2 id={TITLE_ID} className="invite-dialog__title">
         {t('community.invite')}
       </h2>
+      <p className="invite-dialog__name" dir="auto">
+        {communityName}
+      </p>
       {state.kind === 'loading' && (
         <p role="status" aria-busy="true" className="community__status">
           {t('community.invite.loading')}
@@ -46,7 +80,7 @@ export function InviteDialog({ state, onClose, onRetry, onCopy }: InviteDialogPr
           <p role="alert" className="community__error">
             {t('community.invite.error')}
           </p>
-          <button type="button" className="auth__button" onClick={onRetry}>
+          <button type="button" className="auth__button invite-dialog__button" onClick={onRetry}>
             {t('community.invite.retry')}
           </button>
         </>
@@ -54,13 +88,14 @@ export function InviteDialog({ state, onClose, onRetry, onCopy }: InviteDialogPr
       {state.kind === 'ready' && (
         <>
           <a
+            ref={linkRef}
             className="invite-dialog__link"
             href={state.url}
             aria-label={t('community.invite.link')}
           >
             {state.url}
           </a>
-          <p>
+          <p className="invite-dialog__expires">
             <span>{t('community.invite.expires')}</span>{' '}
             <time dateTime={state.expiresAt}>{formatExpiry(state.expiresAt, state.timeZone)}</time>
           </p>
@@ -81,7 +116,7 @@ export function InviteDialog({ state, onClose, onRetry, onCopy }: InviteDialogPr
           </div>
         </>
       )}
-      <button type="button" className="auth__button" onClick={onClose}>
+      <button type="button" className="auth__button invite-dialog__button" onClick={onClose}>
         {t('community.invite.close')}
       </button>
     </section>

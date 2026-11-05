@@ -17,7 +17,15 @@ const ready = (copy: 'idle' | 'copied' | 'failed'): InviteDialogState => ({
 });
 
 const render = (state: InviteDialogState) =>
-  renderToStaticMarkup(<InviteDialog state={state} onClose={noop} onRetry={noop} onCopy={noop} />);
+  renderToStaticMarkup(
+    <InviteDialog
+      communityName="مسجد النور"
+      state={state}
+      onClose={noop}
+      onRetry={noop}
+      onCopy={noop}
+    />,
+  );
 
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#x27;');
@@ -31,6 +39,10 @@ describe('InviteDialog', () => {
     expect(new URL(href ?? '').pathname).toBe(`/join/${TOKEN}`);
     expect(html).toMatch(/<img[^>]*src="data:/);
     expect(html).not.toMatch(/src="https?:/);
+    expect(html).toMatch(/<p class="invite-dialog__name" dir="auto">مسجد النور<\/p>/);
+    expect(html).not.toContain('role="dialog"');
+    expect(html).not.toContain('aria-modal');
+    expect(html).toMatch(/class="auth__button invite-dialog__button"/);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

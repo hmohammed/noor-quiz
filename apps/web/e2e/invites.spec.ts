@@ -39,7 +39,7 @@ test('user A creates an invite and user B joins that community', async ({ browse
     await pageA.getByRole('button', { name: 'Invite' }).click();
     expect((await createdInvite).status()).toBe(201);
 
-    const dialog = pageA.getByRole('dialog');
+    const dialog = pageA.locator('.invite-dialog');
     const link = dialog.getByRole('link');
     await expect(link).toBeVisible();
     const href = await link.getAttribute('href');

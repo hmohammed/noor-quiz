@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import type { CommunitySummary } from '@noor/contracts';
 import { t } from '../../i18n/t';
 
@@ -29,8 +29,14 @@ export interface CommunitiesViewProps {
   onNameChange(value: string): void;
   onTimezoneChange(value: string): void;
   onSubmit(): void;
-  /** Shown for admin and owner rows. */
-  onInvite?(community: CommunitySummary): void;
+  /** Shown for admin and owner rows. The button element is the focus to restore on close. */
+  onInvite?(community: CommunitySummary, opener: HTMLButtonElement): void;
+  /**
+   * Inline invite panel for this tenant, rendered in that row. While set, the rest of
+   * the page is inert so a second tap cannot create another link.
+   */
+  inviteFor?: string;
+  invitePanel?: ReactNode;
   /** Used by the `signed-out` state. */
   onSignIn?(): void;
   /** Used by the load-error state. */
@@ -50,10 +56,17 @@ export function CommunitiesView({
   onTimezoneChange,
   onSubmit,
   onInvite,
+  inviteFor,
+  invitePanel,
   onSignIn,
   onRetry,
 }: CommunitiesViewProps) {
-  const title = <h1 className="community__title">{t('community.title')}</h1>;
+  const locked = inviteFor !== undefined;
+  const title = (
+    <h1 className="community__title" inert={locked ? true : undefined}>
+      {t('community.title')}
+    </h1>
+  );
 
   switch (state.kind) {
     case 'loading':
@@ -122,29 +135,44 @@ export function CommunitiesView({
         )
       ) : (
         <ul className="community__list">
-          {communities.map((community) => (
-            <li key={community.tenantId} className="community__item">
-              <span className="community__name" dir="auto">
-                {community.name}
-              </span>
-              <span className="community__slug">
-                {t('community.slug')} {community.slug}
-              </span>
-              <span className="community__role">{t(`community.role.${community.role}`)}</span>
-              {(community.role === 'admin' || community.role === 'owner') && (
-                <button
-                  type="button"
-                  className="auth__button community__invite"
-                  onClick={() => onInvite?.(community)}
-                >
-                  {t('community.invite')}
-                </button>
-              )}
-            </li>
-          ))}
+          {communities.map((community) => {
+            const active = inviteFor === community.tenantId;
+            return (
+              <li
+                key={community.tenantId}
+                className="community__item"
+                inert={locked && !active ? true : undefined}
+              >
+                <div inert={active ? true : undefined}>
+                  <span className="community__name" dir="auto">
+                    {community.name}
+                  </span>
+                  <span className="community__slug">
+                    {t('community.slug')} {community.slug}
+                  </span>
+                  <span className="community__role">{t(`community.role.${community.role}`)}</span>
+                  {(community.role === 'admin' || community.role === 'owner') && (
+                    <button
+                      type="button"
+                      className="auth__button community__invite"
+                      onClick={(e) => onInvite?.(community, e.currentTarget)}
+                    >
+                      {t('community.invite')}
+                    </button>
+                  )}
+                </div>
+                {active ? invitePanel : null}
+              </li>
+            );
+          })}
         </ul>
       )}
-      <form className="community__form" onSubmit={handleSubmit} noValidate>
+      <form
+        className="community__form"
+        onSubmit={handleSubmit}
+        noValidate
+        inert={locked ? true : undefined}
+      >
         <div className="community__field">
           <label htmlFor={NAME_ID}>{t('community.name')}</label>
           <input

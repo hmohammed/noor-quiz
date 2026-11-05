@@ -48,6 +48,25 @@ describe('JoinView', () => {
     expect(html).not.toMatch(new RegExp(`<button[^>]*>${en['join.join']}</button>`));
   });
 
+  it('signing-in: keeps the name, shows Signing in…, and disables Join', () => {
+    const html = render({ kind: 'signing-in', name: NAME });
+    expect(html).toContain(NAME);
+    expect(html).toMatch(/dir="auto"/);
+    expect(html).toContain(en['auth.loading']);
+    expect(html).toMatch(
+      new RegExp(`<button type="button"[^>]*disabled=""[^>]*>${en['join.join']}</button>`),
+    );
+  });
+
+  it('sign-in failed: keeps the name, shows the failure, and offers Try again', () => {
+    const html = render({ kind: 'sign-in-failed', name: NAME });
+    expect(html).toContain(NAME);
+    expect(html).toMatch(/dir="auto"/);
+    expect(html).toContain(en['auth.error']);
+    expect(html).toMatch(new RegExp(`<button type="button"[^>]*>${en['join.retry']}</button>`));
+    expect(html).not.toMatch(new RegExp(`<button[^>]*>${en['join.join']}</button>`));
+  });
+
   it('signed-out: the name, a sign-in prompt and a Join button', () => {
     const html = render({ kind: 'signed-out', name: NAME });
     expect(html).toContain(en['join.signIn']);
@@ -76,6 +95,8 @@ describe('JoinView', () => {
       render({ kind: 'gone' }),
       render({ kind: 'error' }),
       render({ kind: 'signed-out', name: NAME }),
+      render({ kind: 'signing-in', name: NAME }),
+      render({ kind: 'sign-in-failed', name: NAME }),
       render({ kind: 'preview', name: NAME }),
       render({ kind: 'joining', name: NAME }),
       render({ kind: 'joined', name: NAME }),

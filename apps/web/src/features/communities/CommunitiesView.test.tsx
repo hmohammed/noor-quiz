@@ -104,6 +104,26 @@ describe('CommunitiesView', () => {
     }
   });
 
+  it('renders the invite panel in that row and makes the rest of the page inert', () => {
+    const html = renderToStaticMarkup(
+      <CommunitiesView
+        state={{ kind: 'ready', status: 'idle', values: VALUES, communities: [community('owner')] }}
+        timeZones={ZONES}
+        onNameChange={noop}
+        onTimezoneChange={noop}
+        onSubmit={noop}
+        inviteFor={ULID}
+        invitePanel={<section className="invite-dialog">link</section>}
+      />,
+    );
+    expect(html).toContain('<main class="page">');
+    expect(html).toMatch(
+      /<ul class="community__list">[\s\S]*<section class="invite-dialog">link<\/section>[\s\S]*<\/ul>/,
+    );
+    expect(html).toContain('inert=""');
+    expect(html).not.toMatch(/<section class="invite-dialog"[^>]*inert/);
+  });
+
   it('shows Invite for admin and owner only', () => {
     const label = en['community.invite'];
     for (const role of ['member', 'scholar-reviewer', 'editor'] as const) {
