@@ -121,6 +121,9 @@ describe('CommunitiesView', () => {
       /<ul class="community__list">[\s\S]*<section class="invite-dialog">link<\/section>[\s\S]*<\/ul>/,
     );
     expect(html).toContain('inert=""');
+    expect(html).toMatch(
+      /<div class="community__summary" inert="">[\s\S]*<\/div><section class="invite-dialog">link<\/section>/,
+    );
     expect(html).not.toMatch(/<section class="invite-dialog"[^>]*inert/);
   });
 

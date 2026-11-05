@@ -382,6 +382,13 @@ body {
   text-align: start;
 }
 
+.community__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
 .community__name,
 .community__slug {
   overflow-wrap: break-word;

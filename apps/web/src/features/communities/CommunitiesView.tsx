@@ -143,7 +143,7 @@ export function CommunitiesView({
                 className="community__item"
                 inert={locked && !active ? true : undefined}
               >
-                <div inert={active ? true : undefined}>
+                <div className="community__summary" inert={active ? true : undefined}>
                   <span className="community__name" dir="auto">
                     {community.name}
                   </span>
