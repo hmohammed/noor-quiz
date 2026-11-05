@@ -9,12 +9,15 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import type {
+  ChangeMemberRoleRequestInput,
   CommunityResponse,
   CreateCommunityRequestInput,
   CreateInviteRequestInput,
   CreateInviteResponse,
   CreateSeasonRequestInput,
   MeResponse,
+  MembersResponse,
+  MemberView,
   MyCommunitiesResponse,
   RamadanSuggestionResponse,
   SeasonListResponse,
@@ -67,6 +70,18 @@ export interface Session {
   createSeason(tenantId: string, body: CreateSeasonRequestInput): Promise<SeasonView>;
   /** Fills a suggestion. Does not create a season. */
   suggestRamadanStart(tenantId: string, timezone: string): Promise<RamadanSuggestionResponse>;
+  /** Members of one community. Does not store them on the session. */
+  listMembers(tenantId: string): Promise<MembersResponse>;
+  /** Proposes a role. Does not store the member list on the session. */
+  changeMemberRole(
+    tenantId: string,
+    userId: string,
+    body: ChangeMemberRoleRequestInput,
+  ): Promise<MemberView>;
+  /** Removes someone else. */
+  removeMember(tenantId: string, userId: string): Promise<void>;
+  /** Leaves one community. Does not store the community list on the session. */
+  leaveCommunity(tenantId: string): Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -279,6 +294,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [withToken],
   );
 
+  const listMembers = useCallback(
+    (tenantId: string) =>
+      withToken((idToken, signal) => apiClient.listMembers({ idToken, tenantId, signal })),
+    [withToken],
+  );
+
+  const changeMemberRole = useCallback(
+    (tenantId: string, userId: string, body: ChangeMemberRoleRequestInput) =>
+      withToken((idToken, signal) =>
+        apiClient.changeMemberRole({ idToken, tenantId, userId, body, signal }),
+      ),
+    [withToken],
+  );
+
+  const removeMember = useCallback(
+    (tenantId: string, userId: string) =>
+      withToken((idToken, signal) => apiClient.removeMember({ idToken, tenantId, userId, signal })),
+    [withToken],
+  );
+
+  const leaveCommunity = useCallback(
+    (tenantId: string) =>
+      withToken((idToken, signal) => apiClient.leaveCommunity({ idToken, tenantId, signal })),
+    [withToken],
+  );
+
   const deleteAccount = useCallback(async () => {
     cancelPending();
     const idToken = await getIdToken();
@@ -307,6 +348,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       listSeasons,
       createSeason,
       suggestRamadanStart,
+      listMembers,
+      changeMemberRole,
+      removeMember,
+      leaveCommunity,
     }),
     [
       state,
@@ -322,6 +367,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       listSeasons,
       createSeason,
       suggestRamadanStart,
+      listMembers,
+      changeMemberRole,
+      removeMember,
+      leaveCommunity,
     ],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

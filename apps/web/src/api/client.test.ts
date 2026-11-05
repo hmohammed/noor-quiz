@@ -514,6 +514,70 @@ describe('apiClient seasons', () => {
     expect(fetch.mock.calls[0]?.[1]?.body).toBeUndefined();
   });
 
+  it('lists members, changes a role, removes a member and leaves', async () => {
+    const member = {
+      userId: ULID,
+      displayName: 'Ada',
+      role: 'editor' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+    const fetch = fakeFetch(json({ members: [member] }));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+    await expect(client.listMembers({ idToken: 'tok', tenantId: TENANT })).resolves.toEqual({
+      members: [member],
+    });
+    expect(fetch.mock.calls[0]?.[0]).toBe(`http://api.test/v1/t/${TENANT}/members`);
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('authorization')).toBe('Bearer tok');
+
+    fetch.mockImplementationOnce(async () => json(member));
+    await expect(
+      client.changeMemberRole({
+        idToken: 'tok',
+        tenantId: TENANT,
+        userId: ULID,
+        body: { role: 'editor' },
+      }),
+    ).resolves.toEqual(member);
+    expect(fetch.mock.calls[1]?.[1]?.method).toBe('PATCH');
+    expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body))).toEqual({ role: 'editor' });
+
+    fetch.mockImplementationOnce(async () => new Response(null, { status: 204 }));
+    await expect(
+      client.removeMember({ idToken: 'tok', tenantId: TENANT, userId: ULID }),
+    ).resolves.toBeUndefined();
+    expect(fetch.mock.calls[2]?.[1]?.method).toBe('DELETE');
+    expect(fetch.mock.calls[2]?.[1]?.body).toBeUndefined();
+
+    fetch.mockImplementationOnce(async () => new Response(null, { status: 204 }));
+    await expect(
+      client.leaveCommunity({ idToken: 'tok', tenantId: TENANT }),
+    ).resolves.toBeUndefined();
+    expect(fetch.mock.calls[3]?.[0]).toBe(`http://api.test/v1/t/${TENANT}/leave`);
+    expect(fetch.mock.calls[3]?.[1]?.method).toBe('POST');
+    expect(JSON.parse(String(fetch.mock.calls[3]?.[1]?.body))).toEqual({});
+  });
+
+  it('rejects a member view that leaks email', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(
+        json({
+          members: [
+            {
+              userId: ULID,
+              displayName: 'Ada',
+              role: 'member',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              email: 'a@example.com',
+            },
+          ],
+        }),
+      ),
+    });
+    await expect(client.listMembers({ idToken: 't', tenantId: TENANT })).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
+
   it('rejects a suggestion that is not marked advisory', async () => {
     const client = createApiClient({
       fetch: fakeFetch(

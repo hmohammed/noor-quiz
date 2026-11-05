@@ -13,6 +13,7 @@ import {
   type DomainErrorCode,
   type Membership,
   type MembershipRepo,
+  type Role,
   type TenantId,
   type UserId,
 } from '@noor/core';
@@ -28,6 +29,7 @@ export interface CommunityStoreHarness {
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const AT = '2024-05-06T07:08:09.123Z';
+const NEXT = '2026-02-02T03:04:05.000Z';
 const EMPTY = { communities: 0, memberships: 0, slugs: 0 };
 
 /** A ULID whose payload is `n`. First character is `0`, so it matches `ULID_PATTERN`. */
@@ -92,13 +94,20 @@ function memberOf(userId: UserId, tenantId: TenantId): Membership {
   };
 }
 
-async function expectDomainError(p: Promise<unknown>, code: DomainErrorCode): Promise<void> {
+async function expectDomainError(
+  p: Promise<unknown>,
+  code: DomainErrorCode,
+  reason?: string,
+): Promise<void> {
   const err = await p.then(
     () => expect.fail(`expected DomainError(${code})`),
     (e: unknown) => e,
   );
   expect(isDomainError(err)).toBe(true);
   expect((err as { code: string }).code).toBe(code);
+  if (reason !== undefined) {
+    expect((err as { details?: { reason?: string } }).details?.reason).toBe(reason);
+  }
 }
 
 /**
@@ -321,6 +330,148 @@ export function runCommunityStoreContract(
       const harness = await makeImpl();
       await expectDomainError(call(harness), 'VALIDATION');
       expect(await harness.counts()).toEqual(EMPTY);
+    });
+
+    it('listByTenant returns only that tenant, and the rows are copies', async () => {
+      const { communities, memberships, seedMembership } = await makeImpl();
+      const tenantA = asTenantId(ulid(1));
+      const tenantB = asTenantId(ulid(2));
+      await communities.createWithOwner(ownerInput(tenantA, USER_A, 'alpha'));
+      await communities.createWithOwner(ownerInput(tenantB, USER_B, 'beta'));
+      await seedMembership(memberOf(USER_B, tenantA));
+
+      const listed = await memberships.listByTenant(tenantA);
+      expect(listed.map((membership) => membership.userId).sort()).toEqual([USER_A, USER_B].sort());
+      expect(listed.every((membership) => membership.tenantId === tenantA)).toBe(true);
+      const owner = listed.find((membership) => membership.userId === USER_A);
+      expect(owner?.role).toBe('owner');
+      owner!.role = 'member';
+      expect((await memberships.get(tenantA, USER_A))?.role).toBe('owner');
+      expect(
+        (await memberships.listByTenant(tenantB)).map((membership) => membership.userId),
+      ).toEqual([USER_B]);
+    });
+
+    it('updateRole on a missing doc is NOT_FOUND and creates nothing', async () => {
+      const { communities, memberships, counts } = await makeImpl();
+      const tenant = asTenantId(ulid(1));
+      await communities.createWithOwner(ownerInput(tenant, USER_A, 'masjid'));
+      const before = await counts();
+
+      await expectDomainError(memberships.updateRole(tenant, USER_B, 'editor', NEXT), 'NOT_FOUND');
+
+      expect(await counts()).toEqual(before);
+      expect(await memberships.get(tenant, USER_B)).toBeNull();
+    });
+
+    it('updateRole of the sole owner to a non-owner is CONFLICT and leaves the doc', async () => {
+      const { communities, memberships } = await makeImpl();
+      const tenant = asTenantId(ulid(1));
+      await communities.createWithOwner(ownerInput(tenant, USER_A, 'masjid'));
+      const before = await memberships.get(tenant, USER_A);
+
+      await expectDomainError(
+        memberships.updateRole(tenant, USER_A, 'admin', NEXT),
+        'CONFLICT',
+        'last-owner',
+      );
+
+      expect(await memberships.get(tenant, USER_A)).toEqual(before);
+    });
+
+    it('updateRole of an owner to owner succeeds and stores the caller timestamp', async () => {
+      const { communities, memberships } = await makeImpl();
+      const tenant = asTenantId(ulid(1));
+      await communities.createWithOwner(ownerInput(tenant, USER_A, 'masjid'));
+
+      const updated = await memberships.updateRole(tenant, USER_A, 'owner', NEXT);
+
+      expect(updated.role).toBe('owner');
+      expect(updated.updatedAt).toBe(NEXT);
+      expect(updated.createdAt).toBe(AT);
+      expect(updated.schemaVersion).toBe(MEMBERSHIP_SCHEMA_VERSION);
+      expect(await memberships.get(tenant, USER_A)).toEqual(updated);
+    });
+
+    it('updateRole demotes one of two owners and leaves exactly one owner', async () => {
+      const { communities, memberships, seedMembership } = await makeImpl();
+      const tenant = asTenantId(ulid(1));
+      await communities.createWithOwner(ownerInput(tenant, USER_A, 'masjid'));
+      await seedMembership({ ...memberOf(USER_B, tenant), role: 'owner' });
+
+      const updated = await memberships.updateRole(tenant, USER_B, 'admin', NEXT);
+
+      expect(updated.role).toBe('admin');
+      expect(updated.updatedAt).toBe(NEXT);
+      const owners = (await memberships.listByTenant(tenant)).filter(
+        (membership) => membership.role === 'owner',
+      );
+      expect(owners.map((membership) => membership.userId)).toEqual([USER_A]);
+    });
+
+    it('remove of the sole owner is CONFLICT and leaves the doc', async () => {
+      const { communities, memberships } = await makeImpl();
+      const tenant = asTenantId(ulid(1));
+      const created = await communities.createWithOwner(ownerInput(tenant, USER_A, 'masjid'));
+
+      await expectDomainError(memberships.remove(tenant, USER_A), 'CONFLICT', 'last-owner');
+
+      expect(await memberships.get(tenant, USER_A)).toEqual(created.membership);
+    });
+
+    it('remove of one tenant leaves the same user in another tenant', async () => {
+      const { communities, memberships, seedMembership } = await makeImpl();
+      const tenantA = asTenantId(ulid(1));
+      const tenantB = asTenantId(ulid(2));
+      await communities.createWithOwner(ownerInput(tenantA, USER_A, 'alpha'));
+      const other = memberOf(USER_A, tenantB);
+      await seedMembership(other);
+
+      await expect(memberships.remove(tenantB, USER_A)).resolves.toBeUndefined();
+
+      expect(await memberships.get(tenantB, USER_A)).toBeNull();
+      expect((await memberships.get(tenantA, USER_A))?.role).toBe('owner');
+    });
+
+    it('remove of a non-owner succeeds when the tenant has no owner', async () => {
+      const { memberships, seedMembership } = await makeImpl();
+      const tenant = asTenantId(ulid(3));
+      await seedMembership(memberOf(USER_B, tenant));
+
+      await expect(memberships.remove(tenant, USER_B)).resolves.toBeUndefined();
+
+      expect(await memberships.get(tenant, USER_B)).toBeNull();
+    });
+
+    it('a non-ULID id, a bad role, or a bad updatedAt is VALIDATION and writes nothing', async () => {
+      const { communities, memberships, counts } = await makeImpl();
+      const tenant = asTenantId(ulid(1));
+      await communities.createWithOwner(ownerInput(tenant, USER_A, 'masjid'));
+      const before = await counts();
+      const stored = await memberships.get(tenant, USER_A);
+
+      await expectDomainError(memberships.listByTenant('nope' as TenantId), 'VALIDATION');
+      await expectDomainError(
+        memberships.updateRole('nope' as TenantId, USER_A, 'admin', NEXT),
+        'VALIDATION',
+      );
+      await expectDomainError(
+        memberships.updateRole(tenant, 'nope' as UserId, 'admin', NEXT),
+        'VALIDATION',
+      );
+      await expectDomainError(
+        memberships.updateRole(tenant, USER_A, 'nope' as Role, NEXT),
+        'VALIDATION',
+      );
+      await expectDomainError(
+        memberships.updateRole(tenant, USER_A, 'admin', 'yesterday'),
+        'VALIDATION',
+      );
+      await expectDomainError(memberships.remove('nope' as TenantId, USER_A), 'VALIDATION');
+      await expectDomainError(memberships.remove(tenant, 'nope' as UserId), 'VALIDATION');
+
+      expect(await counts()).toEqual(before);
+      expect(await memberships.get(tenant, USER_A)).toEqual(stored);
     });
   });
 }
