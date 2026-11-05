@@ -7,6 +7,7 @@ import type {
 import type { Invite } from '../communities/invite';
 import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
+import type { Question, QuestionId } from '../questions/question';
 import type { CommunitySeason, SeasonId } from '../season/community-season';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
 
@@ -172,4 +173,31 @@ export interface SeasonRepo {
   list(tenantId: TenantId): Promise<CommunitySeason[]>;
   create(season: CommunitySeason): Promise<CommunitySeason>;
   update(season: CommunitySeason): Promise<CommunitySeason>;
+}
+
+/**
+ * `questions/{questionId}` (top-level, ULID id, flat). No composite index: `list` is a
+ * single-field `tenantId` equality, and the use case sorts. The answer stays on the
+ * document; member routes must use `MemberQuestionView`, not this record.
+ *
+ * `{ id, tenantId, type: "mcq", difficulty, topic, locales, answer: { choiceIndex },
+ * sources, reviewStatus, reviewNotes, authoredBy, createdAt, updatedAt, schemaVersion: 1 }`.
+ * `locales` is a map of `en` | `sv` | `ar` | `am` | `so` to `{ title, prompt, choices,
+ * explanation }`. `sources` is 0–8 `{ kind, ref }` so a later import can store a draft
+ * with `sources: []`. On create, `updatedAt` equals `createdAt`. Timestamps and ids are
+ * arguments; implementations do not read a clock or mint an id.
+ *
+ * `get` returns null when the document is missing or its `tenantId` differs.
+ * `create` uses `question.id` as the document id. An existing id is `CONFLICT` and does
+ * not overwrite. A non-ULID id, a non-ULID `tenantId`, or `schemaVersion !== 1` is
+ * `VALIDATION` and writes nothing. `update` changes content fields only. A missing
+ * document or a tenant mismatch is `NOT_FOUND`. A change to `type`, `authoredBy`,
+ * `createdAt` or `schemaVersion` is `VALIDATION`.
+ */
+export interface QuestionRepo {
+  get(tenantId: TenantId, questionId: QuestionId): Promise<Question | null>;
+  /** Every question with this `tenantId`. Unsorted. */
+  list(tenantId: TenantId): Promise<Question[]>;
+  create(question: Question): Promise<Question>;
+  update(question: Question): Promise<Question>;
 }

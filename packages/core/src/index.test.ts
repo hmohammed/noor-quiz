@@ -52,6 +52,14 @@ describe('@noor/core', () => {
     'createInvite',
     'previewInvite',
     'acceptInvite',
+    'createQuestion',
+    'listQuestions',
+    'updateQuestion',
+    'asQuestionId',
+    'copyQuestion',
+    'isQuestionDifficulty',
+    'isSourceKind',
+    'isReviewStatus',
     'createSeason',
     'listSeasons',
     'updateSeason',
@@ -85,5 +93,13 @@ describe('@noor/core', () => {
   it('exports the season constants', () => {
     expect(core.SEASON_KINDS).toEqual(['ramadan', 'dhul_hijjah', 'muharram', 'weekly', 'custom']);
     expect(core.SEASON_SCHEMA_VERSION).toBe(1);
+  });
+
+  it('exports the question constants', () => {
+    expect(core.QUESTION_DIFFICULTIES).toEqual(['beginner', 'intermediate', 'scholar']);
+    expect(core.SOURCE_KINDS).toEqual(['quran', 'hadith', 'book']);
+    expect(core.REVIEW_STATUSES).toEqual(['draft', 'in_review', 'approved', 'rejected']);
+    expect(core.QUESTION_TYPES).toEqual(['mcq']);
+    expect(core.QUESTION_SCHEMA_VERSION).toBe(1);
   });
 });

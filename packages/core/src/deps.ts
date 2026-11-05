@@ -5,6 +5,7 @@ import type {
   CommunityRepo,
   InviteRepo,
   MembershipRepo,
+  QuestionRepo,
   SeasonRepo,
   UserRepo,
 } from './ports/repos';
@@ -22,4 +23,5 @@ export interface Deps {
   memberships: MembershipRepo;
   invites: InviteRepo;
   seasons: SeasonRepo;
+  questions: QuestionRepo;
 }

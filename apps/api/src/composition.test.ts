@@ -6,6 +6,7 @@ import {
   FirestoreMembershipRepo,
 } from './adapters/firebase/community-repo';
 import { FirestoreInviteRepo } from './adapters/firebase/invite-repo';
+import { FirestoreQuestionRepo } from './adapters/firebase/question-repo';
 import { FirestoreSeasonRepo } from './adapters/firebase/season-repo';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
@@ -80,6 +81,7 @@ describe('createComposition', () => {
     expect(root.deps.memberships).toBeInstanceOf(FirestoreMembershipRepo);
     expect(root.deps.invites).toBeInstanceOf(FirestoreInviteRepo);
     expect(root.deps.seasons).toBeInstanceOf(FirestoreSeasonRepo);
+    expect(root.deps.questions).toBeInstanceOf(FirestoreQuestionRepo);
     expect(built.auths).toBe(1);
     expect(built.clocks).toBe(1);
     expect(built.firestores).toBe(1);
