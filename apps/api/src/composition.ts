@@ -7,6 +7,7 @@ import {
   FirestoreMembershipRepo,
 } from './adapters/firebase/community-repo';
 import { FirestoreInviteRepo } from './adapters/firebase/invite-repo';
+import { FirestoreSeasonRepo } from './adapters/firebase/season-repo';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
 import { UlidIdGenerator } from './adapters/system/ulid-id-generator';
@@ -38,6 +39,7 @@ export function createComposition(
     communities: new FirestoreCommunityRepo(db),
     memberships: new FirestoreMembershipRepo(db),
     invites: new FirestoreInviteRepo(db),
+    seasons: new FirestoreSeasonRepo(db),
   };
   return { config, deps, version: opts.version };
 }

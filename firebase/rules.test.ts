@@ -110,6 +110,24 @@ const seeds = {
       schemaVersion: 1,
     },
   },
+  seasons: {
+    id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    data: {
+      id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      tenantId: TENANT_ID,
+      name: 'Ramadan 1448',
+      kind: 'ramadan',
+      startDate: '2035-01-01',
+      lengthDays: 30,
+      timezone: 'Europe/Stockholm',
+      opensAtLocal: '08:00',
+      closesAtLocal: '21:00',
+      createdBy: ALICE_USER_ID,
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    },
+  },
 } as const;
 
 type CollectionName = keyof typeof seeds;

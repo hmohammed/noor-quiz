@@ -13,8 +13,12 @@ import type {
   CreateCommunityRequestInput,
   CreateInviteRequestInput,
   CreateInviteResponse,
+  CreateSeasonRequestInput,
   MeResponse,
   MyCommunitiesResponse,
+  RamadanSuggestionResponse,
+  SeasonListResponse,
+  SeasonView,
   UpdateMeRequestInput,
 } from '@noor/contracts';
 import { ApiError, apiClient } from '../../api/client';
@@ -57,6 +61,12 @@ export interface Session {
   createInvite(tenantId: string, body: CreateInviteRequestInput): Promise<CreateInviteResponse>;
   /** Accepts an invite and returns the community summary. Does not store it on the session. */
   acceptInvite(token: string): Promise<CommunityResponse>;
+  /** Seasons for one community. Does not store them on the session. */
+  listSeasons(tenantId: string): Promise<SeasonListResponse>;
+  /** Creates a season. Does not store the season list on the session. */
+  createSeason(tenantId: string, body: CreateSeasonRequestInput): Promise<SeasonView>;
+  /** Fills a suggestion. Does not create a season. */
+  suggestRamadanStart(tenantId: string, timezone: string): Promise<RamadanSuggestionResponse>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -249,6 +259,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [withToken],
   );
 
+  const listSeasons = useCallback(
+    (tenantId: string) =>
+      withToken((idToken, signal) => apiClient.listSeasons({ idToken, tenantId, signal })),
+    [withToken],
+  );
+
+  const createSeason = useCallback(
+    (tenantId: string, body: CreateSeasonRequestInput) =>
+      withToken((idToken, signal) => apiClient.createSeason({ idToken, tenantId, body, signal })),
+    [withToken],
+  );
+
+  const suggestRamadanStart = useCallback(
+    (tenantId: string, timezone: string) =>
+      withToken((idToken, signal) =>
+        apiClient.suggestRamadanStart({ idToken, tenantId, timezone, signal }),
+      ),
+    [withToken],
+  );
+
   const deleteAccount = useCallback(async () => {
     cancelPending();
     const idToken = await getIdToken();
@@ -274,6 +304,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       listMyCommunities,
       createInvite,
       acceptInvite,
+      listSeasons,
+      createSeason,
+      suggestRamadanStart,
     }),
     [
       state,
@@ -286,6 +319,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       listMyCommunities,
       createInvite,
       acceptInvite,
+      listSeasons,
+      createSeason,
+      suggestRamadanStart,
     ],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
