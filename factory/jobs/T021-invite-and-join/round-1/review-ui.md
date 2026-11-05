@@ -1,0 +1,14 @@
+VERDICT: CHANGES
+# UI design review — T021 round 1
+
+## Findings
+- [must-fix] apps/web/src/features/communities/CommunitiesPage.tsx:234 — `InviteDialog` is a sibling of `CommunitiesView`’s `<main class="page">`, so it sits between that column and the footer. `.page` is the only centered column (`max-inline-size: 40rem`, `margin-inline: auto`, `padding-inline: var(--space-4)`). `.invite-dialog` (styles.css:403) has `max-inline-size: 28rem` and no `margin-inline`, so on a wide screen the card sticks to the viewport start while the list stays centered, and at 360px its border is flush with the screen edge. It also opens under the create-community form, away from the Invite button. `role="dialog"` and `aria-modal="true"` (InviteDialog.tsx:35) describe a modal this layout does not show. Render the panel inside `main.page`, with the community list, using the same inline inset as the rest of the page. Keep it an inline panel (there is no overlay component; `.profile-delete` is the neighbour) unless you also add a backdrop.
+
+- [must-fix] apps/web/src/styles.css:403 — `.invite-dialog` is a column flex with `align-items: stretch`, and Close / Retry are direct `auth__button` children (InviteDialog.tsx:49 and :84). Those buttons therefore grow to the full card width. Copy stays content-sized because it sits in `.invite-dialog__actions`. Elsewhere on this page `.community__invite` and `.profile-delete__start` use `align-self: start` so `auth__button` stays at least `6rem` and no wider. Give the dialog buttons `align-self: start`, or put Close in the actions row.
+
+## Nits (non-blocking)
+- apps/web/src/features/invites/InviteDialog.tsx:63 — the expiry line is a bare `<p>`. There is no global `p` margin reset, and the other text blocks (`.community__status`, `.join__status`, `.invite-dialog__title`) set `margin-block: 0`. The user-agent margin stacks with `.invite-dialog`’s `gap`. Zero that margin.
+- apps/web/src/styles.css:420 — `.invite-dialog__link` only sets `overflow-wrap`. Site links use `color: var(--color-accent)`. The invite URL falls back to the browser’s default blue.
+- apps/web/src/features/invites/JoinView.tsx:100 — while joining, the button label and the status paragraph both show `join.joining`, so the same phrase appears twice.
+
+Join view states, `dir="auto"` on the community name, logical properties in the new CSS (`margin-block`, `max-inline-size`, `inline-size`, `text-align: start`, `align-self: start`; no `left`/`right`), reuse of `auth__button` / `community__error` / `community__status`, the existing radius `0.375rem`, and the Noto Arabic/Ethiopic stack with root `line-height: 1.5` all match the current screens. Error red `#a8322d` and accent `#1f5f8b` are the existing tokens and stay above WCAG AA on `#fbfaf7`. The QR SVG’s `#fff` / `#000` are the image, not theme colours.
