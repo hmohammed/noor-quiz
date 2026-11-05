@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CommunitySummary } from '@noor/contracts';
 import en from '../../i18n/en.json';
 import {
@@ -7,6 +7,7 @@ import {
   type CommunitiesViewState,
   type CommunityFormStatus,
   type CommunityFormValues,
+  type CommunityLeaveError,
 } from './CommunitiesView';
 
 const noop = () => undefined;
@@ -23,7 +24,10 @@ const community = (role: CommunitySummary['role'], name = 'Masjid Al-Noor'): Com
   createdAt: '2026-01-01T00:00:00.000Z',
 });
 
-const render = (state: CommunitiesViewState) =>
+const render = (
+  state: CommunitiesViewState,
+  handlers: Partial<Parameters<typeof CommunitiesView>[0]> = {},
+) =>
   renderToStaticMarkup(
     <CommunitiesView
       state={state}
@@ -31,14 +35,39 @@ const render = (state: CommunitiesViewState) =>
       onNameChange={noop}
       onTimezoneChange={noop}
       onSubmit={noop}
+      {...handlers}
     />,
   );
+
+const readyState = (
+  status: CommunityFormStatus,
+  communities: readonly CommunitySummary[],
+  values: CommunityFormValues = VALUES,
+  leave: {
+    confirmLeaveTenantId?: string | null;
+    leaving?: boolean;
+    leaveError?: CommunityLeaveError;
+  } = {},
+): Extract<CommunitiesViewState, { kind: 'ready' }> => ({
+  kind: 'ready',
+  status,
+  values,
+  communities,
+  confirmLeaveTenantId: leave.confirmLeaveTenantId ?? null,
+  leaving: leave.leaving ?? false,
+  leaveError: leave.leaveError ?? null,
+});
 
 const ready = (
   status: CommunityFormStatus,
   communities: readonly CommunitySummary[],
   values: CommunityFormValues = VALUES,
-) => render({ kind: 'ready', status, values, communities });
+  leave: {
+    confirmLeaveTenantId?: string | null;
+    leaving?: boolean;
+    leaveError?: CommunityLeaveError;
+  } = {},
+) => render(readyState(status, communities, values, leave));
 
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#x27;');
@@ -106,10 +135,48 @@ describe('CommunitiesView', () => {
     expect(html).toContain(en['season.link']);
   });
 
+  it('admin and owner rows link to Members; member, scholar-reviewer and editor do not', () => {
+    const href = `href="/communities/${ULID}/members"`;
+    for (const role of ['member', 'scholar-reviewer', 'editor'] as const) {
+      const html = ready('idle', [community(role)]);
+      expect(html).not.toContain(href);
+      expect(html).not.toContain(en['members.link']);
+    }
+    for (const role of ['admin', 'owner'] as const) {
+      const html = ready('idle', [community(role)]);
+      expect(html).toContain(href);
+      expect(html).toContain(en['members.link']);
+    }
+  });
+
+  it('every row can start Leave, and confirming leave calls the handler', () => {
+    const onLeaveStart = vi.fn();
+    const onLeave = vi.fn();
+    for (const role of ['member', 'scholar-reviewer', 'editor', 'admin', 'owner'] as const) {
+      const html = ready('idle', [community(role)]);
+      expect(html).toContain(en['community.leave']);
+    }
+    const confirming = render(
+      readyState('idle', [community('member')], VALUES, { confirmLeaveTenantId: ULID }),
+      { onLeaveStart, onLeave },
+    );
+    expect(confirming).toContain(en['community.leave.confirmPrompt']);
+    expect(confirming).toContain(en['community.leave.confirm']);
+    expect(confirming).toContain(en['community.leave.cancel']);
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(onLeaveStart).not.toHaveBeenCalled();
+  });
+
+  it('a failed leave with the last-owner signal shows the last-owner copy and keeps the row', () => {
+    const html = ready('idle', [community('owner')], VALUES, { leaveError: 'last-owner' });
+    expect(html).toContain(en['community.leave.lastOwner']);
+    expect(html).toContain('Masjid Al-Noor');
+  });
+
   it('renders the invite panel in that row and makes the rest of the page inert', () => {
     const html = renderToStaticMarkup(
       <CommunitiesView
-        state={{ kind: 'ready', status: 'idle', values: VALUES, communities: [community('owner')] }}
+        state={readyState('idle', [community('owner')])}
         timeZones={ZONES}
         onNameChange={noop}
         onTimezoneChange={noop}
@@ -201,6 +268,15 @@ describe('CommunitiesView', () => {
         { ...community('admin'), tenantId: '01ARZ3NDEKTSV4RRFFQ69G5FB1' },
         { ...community('owner'), tenantId: '01ARZ3NDEKTSV4RRFFQ69G5FB2' },
       ]),
+      ready('idle', [community('owner')], VALUES, {
+        confirmLeaveTenantId: ULID,
+        leaveError: 'generic',
+      }),
+      ready('idle', [community('owner')], VALUES, {
+        confirmLeaveTenantId: ULID,
+        leaving: true,
+      }),
+      ready('idle', [community('owner')], VALUES, { leaveError: 'last-owner' }),
     ].join('\n');
     for (const [key, value] of Object.entries(en)) {
       if (!key.startsWith('community.')) continue;

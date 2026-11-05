@@ -113,6 +113,13 @@ function membershipsOf(rows: Membership[] = []) {
       [...memberships.values()].filter((row) => row.userId === userId).map((row) => ({ ...row })),
     ),
     deleteByUser,
+    listByTenant: vi.fn(async () => []),
+    updateRole: vi.fn(async () => {
+      throw new Error('updateRole should not be called');
+    }),
+    remove: vi.fn(async () => {
+      throw new Error('remove should not be called');
+    }),
   } satisfies MembershipRepo;
   return { repo, memberships, deleteByUser };
 }

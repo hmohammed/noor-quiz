@@ -69,6 +69,13 @@ function repos(rows: Membership[], docs: Community[]) {
     get: vi.fn(async () => null),
     listByUser: vi.fn(async (userId: UserId) => byUser.get(userId) ?? []),
     deleteByUser: vi.fn(async () => undefined),
+    listByTenant: vi.fn(async () => []),
+    updateRole: vi.fn(async () => {
+      throw new Error('updateRole should not be called');
+    }),
+    remove: vi.fn(async () => {
+      throw new Error('remove should not be called');
+    }),
   } satisfies MembershipRepo;
   return { communities, memberships, getByIds };
 }

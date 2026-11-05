@@ -7,6 +7,7 @@ import {
   DomainError,
   instantFromIso,
   isDomainError,
+  isRole,
   MEMBERSHIP_SCHEMA_VERSION,
   membershipId,
   ROLES,
@@ -19,6 +20,7 @@ import {
   type CreateWithOwnerInput,
   type Membership,
   type MembershipRepo,
+  type Role,
   type TenantId,
   type UserId,
 } from '@noor/core';
@@ -296,5 +298,69 @@ export class FirestoreMembershipRepo implements MembershipRepo {
       });
       if (deleted === 0) return;
     }
+  }
+
+  async listByTenant(tenantId: TenantId): Promise<Membership[]> {
+    const tid = asTenantId(tenantId);
+    const snap = await this.#memberships.where('tenantId', '==', tid).get();
+    return snap.docs
+      .map((doc) => doc.data())
+      .filter((membership) => membership.tenantId === tid)
+      .map((membership) => ({ ...membership }));
+  }
+
+  async updateRole(
+    tenantId: TenantId,
+    userId: UserId,
+    role: Role,
+    updatedAt: string,
+  ): Promise<Membership> {
+    const tid = asTenantId(tenantId);
+    const uid = asUserId(userId);
+    if (!isRole(role)) throw new DomainError('VALIDATION', { reason: 'invalid-role' });
+    instantFromIso(updatedAt);
+    const id = membershipId(uid, tid);
+    return this.#db.runTransaction(async (tx) => {
+      const targetSnap = await tx.get(this.#memberships.doc(id));
+      const tenantSnap = await tx.get(this.#memberships.where('tenantId', '==', tid));
+      const target = targetSnap.data();
+      if (!target || target.tenantId !== tid || target.userId !== uid) {
+        throw new DomainError('NOT_FOUND', { reason: 'membership-missing' });
+      }
+      if (target.role === 'owner' && role !== 'owner') {
+        const owners = tenantSnap.docs.filter((doc) => doc.data().role === 'owner').length;
+        if (owners < 2) throw new DomainError('CONFLICT', { reason: 'last-owner' });
+      }
+      // Unconverted update so only role and updatedAt change.
+      tx.update(this.#db.collection('memberships').doc(id), { role, updatedAt });
+      return {
+        id: target.id,
+        tenantId: target.tenantId,
+        userId: target.userId,
+        role,
+        createdAt: target.createdAt,
+        updatedAt,
+        schemaVersion: target.schemaVersion,
+      };
+    });
+  }
+
+  async remove(tenantId: TenantId, userId: UserId): Promise<void> {
+    const tid = asTenantId(tenantId);
+    const uid = asUserId(userId);
+    const id = membershipId(uid, tid);
+    await this.#db.runTransaction(async (tx) => {
+      const targetSnap = await tx.get(this.#memberships.doc(id));
+      const tenantSnap = await tx.get(this.#memberships.where('tenantId', '==', tid));
+      const target = targetSnap.data();
+      if (!target || target.tenantId !== tid || target.userId !== uid) {
+        throw new DomainError('NOT_FOUND', { reason: 'membership-missing' });
+      }
+      if (target.role === 'owner') {
+        const owners = tenantSnap.docs.filter((doc) => doc.data().role === 'owner').length;
+        if (owners < 2) throw new DomainError('CONFLICT', { reason: 'last-owner' });
+      }
+      tx.delete(this.#db.collection('memberships').doc(id));
+    });
   }
 }

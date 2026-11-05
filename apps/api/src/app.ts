@@ -6,6 +6,7 @@ import { communitiesRoutes } from './routes/communities';
 import { healthRoutes } from './routes/health';
 import { invitesRoutes } from './routes/invites';
 import { meRoutes } from './routes/me';
+import { membersRoutes } from './routes/members';
 import { questionsRoutes } from './routes/questions';
 import { seasonsRoutes } from './routes/seasons';
 
@@ -31,6 +32,7 @@ export function createApp(root: AppRootInput): Hono<AppEnv> {
   app.route('/', meRoutes());
   app.route('/', communitiesRoutes());
   app.route('/', invitesRoutes());
+  app.route('/', membersRoutes());
   app.route('/', seasonsRoutes());
   app.route('/', questionsRoutes());
   return app;
