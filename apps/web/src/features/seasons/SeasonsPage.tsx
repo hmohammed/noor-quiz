@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { CreateSeasonRequest, type SeasonView } from '@noor/contracts';
 import { useSession, type Session } from '../auth/session-context';
@@ -102,6 +102,7 @@ function SeasonsEditor({
   const [seasons, setSeasons] = useState<readonly SeasonView[]>([]);
   const [values, setValues] = useState<SeasonFormValues>(() => emptyValues(''));
   const [status, setStatus] = useState<SeasonFormStatus>('idle');
+  const suggestInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,19 +201,25 @@ function SeasonsEditor({
   };
 
   const handleSuggest = () => {
-    if (status === 'saving' || status === 'suggesting') return;
+    if (status === 'saving' || status === 'suggesting' || suggestInFlight.current) return;
     if (values.timezone === '') {
       if (status !== 'list-error') setStatus('invalid');
       return;
     }
     const returnToListError = status === 'list-error';
-    setStatus('suggesting');
+    // A list failure must stay on screen for the whole suggestion, including a rejection.
+    if (!returnToListError) setStatus('suggesting');
+    suggestInFlight.current = true;
     suggestRamadanStart(tenantId, values.timezone).then(
       (suggestion) => {
+        suggestInFlight.current = false;
         setValues((current) => applyRamadanSuggestion(current, suggestion));
         setStatus(returnToListError ? 'list-error' : 'idle');
       },
-      () => setStatus('suggest-error'),
+      () => {
+        suggestInFlight.current = false;
+        setStatus(returnToListError ? 'list-error' : 'suggest-error');
+      },
     );
   };
 
