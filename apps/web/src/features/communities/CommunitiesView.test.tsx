@@ -104,6 +104,41 @@ describe('CommunitiesView', () => {
     }
   });
 
+  it('renders the invite panel in that row and makes the rest of the page inert', () => {
+    const html = renderToStaticMarkup(
+      <CommunitiesView
+        state={{ kind: 'ready', status: 'idle', values: VALUES, communities: [community('owner')] }}
+        timeZones={ZONES}
+        onNameChange={noop}
+        onTimezoneChange={noop}
+        onSubmit={noop}
+        inviteFor={ULID}
+        invitePanel={<section className="invite-dialog">link</section>}
+      />,
+    );
+    expect(html).toContain('<main class="page">');
+    expect(html).toMatch(
+      /<ul class="community__list">[\s\S]*<section class="invite-dialog">link<\/section>[\s\S]*<\/ul>/,
+    );
+    expect(html).toContain('inert=""');
+    expect(html).toMatch(
+      /<div class="community__summary" inert="">[\s\S]*<\/div><section class="invite-dialog">link<\/section>/,
+    );
+    expect(html).not.toMatch(/<section class="invite-dialog"[^>]*inert/);
+  });
+
+  it('shows Invite for admin and owner only', () => {
+    const label = en['community.invite'];
+    for (const role of ['member', 'scholar-reviewer', 'editor'] as const) {
+      expect(ready('idle', [community(role)])).not.toContain(`>${label}<`);
+    }
+    for (const role of ['admin', 'owner'] as const) {
+      const html = ready('idle', [community(role)]);
+      expect(html).toContain(`>${label}<`);
+      expect(html).toMatch(/<button type="button"[^>]*class="auth__button community__invite"/);
+    }
+  });
+
   it('name input has dir="auto"', () => {
     const html = ready('idle', []);
     expect(html).toMatch(/<input[^>]*id="community-name"[^>]*dir="auto"/);
@@ -167,6 +202,7 @@ describe('CommunitiesView', () => {
     ].join('\n');
     for (const [key, value] of Object.entries(en)) {
       if (!key.startsWith('community.')) continue;
+      if (key.startsWith('community.invite.') || key === 'community.invite') continue;
       expect(html, key).toContain(escape(value));
     }
   });

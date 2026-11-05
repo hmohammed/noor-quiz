@@ -15,3 +15,4 @@ export * from './profile-cases';
 export * from './contracts/auth-verifier.contract';
 export * from './contracts/user-repo.contract';
 export * from './contracts/community-store.contract';
+export * from './contracts/invite-repo.contract';

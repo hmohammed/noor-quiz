@@ -8,6 +8,7 @@ export const DOMAIN_ERROR_CODES = [
   'FORBIDDEN',
   'CONSENT_REQUIRED',
   'NOT_FOUND',
+  'GONE',
   'CONFLICT',
   'CLOSED',
   'QUOTA_EXCEEDED',

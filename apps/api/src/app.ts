@@ -4,6 +4,7 @@ import type { AppEnv } from './app-env';
 import { installErrorHandling } from './errors';
 import { communitiesRoutes } from './routes/communities';
 import { healthRoutes } from './routes/health';
+import { invitesRoutes } from './routes/invites';
 import { meRoutes } from './routes/me';
 
 /** What the HTTP app is built from: ports for use cases and the build version. */
@@ -27,5 +28,6 @@ export function createApp(root: AppRootInput): Hono<AppEnv> {
   app.route('/', healthRoutes(root.version));
   app.route('/', meRoutes());
   app.route('/', communitiesRoutes());
+  app.route('/', invitesRoutes());
   return app;
 }

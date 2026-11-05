@@ -1,7 +1,7 @@
 import type { AuthVerifier } from './ports/auth-verifier';
 import type { Clock } from './ports/clock';
 import type { IdGenerator } from './ports/id-generator';
-import type { CommunityRepo, MembershipRepo, UserRepo } from './ports/repos';
+import type { CommunityRepo, InviteRepo, MembershipRepo, UserRepo } from './ports/repos';
 
 /**
  * Ports available to use cases. Routes get real adapters from
@@ -14,4 +14,5 @@ export interface Deps {
   users: UserRepo;
   communities: CommunityRepo;
   memberships: MembershipRepo;
+  invites: InviteRepo;
 }

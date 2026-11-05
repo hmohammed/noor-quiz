@@ -96,6 +96,20 @@ const seeds = {
       schemaVersion: 1,
     },
   },
+  invites: {
+    id: '01BBBBBBBBBBBBBBBBBBBBBBBB',
+    data: {
+      id: '01BBBBBBBBBBBBBBBBBBBBBBBB',
+      tenantId: TENANT_ID,
+      createdBy: ALICE_USER_ID,
+      expiresAt: AT,
+      maxUses: 25,
+      uses: 0,
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    },
+  },
 } as const;
 
 type CollectionName = keyof typeof seeds;

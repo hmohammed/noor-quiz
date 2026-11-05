@@ -366,3 +366,81 @@ describe('apiClient.listMyCommunities', () => {
     expect((err as ApiError).status).toBe(401);
   });
 });
+
+describe('apiClient.createInvite', () => {
+  const created = {
+    token: ULID,
+    expiresAt: '2026-01-08T00:00:00.000Z',
+    maxUses: 25,
+  };
+
+  it('sends POST /v1/t/:tenantId/invites with the bearer token and {}', async () => {
+    const fetch = fakeFetch(json(created, 201));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(
+      client.createInvite({ idToken: 'tok.en.value', tenantId: ULID, body: {} }),
+    ).resolves.toEqual(created);
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe(`http://api.test/v1/t/${ULID}/invites`);
+    expect(init?.method).toBe('POST');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(JSON.parse(String(init?.body))).toEqual({});
+  });
+
+  it('throws ApiError when the body leaks createdBy', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ ...created, createdBy: ULID }, 201)),
+    });
+    await expect(
+      client.createInvite({ idToken: 't', tenantId: ULID, body: {} }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('apiClient.previewInvite', () => {
+  it('sends GET with no Authorization header', async () => {
+    const fetch = fakeFetch(json({ name: 'Masjid Al-Noor' }));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(client.previewInvite({ token: ULID })).resolves.toEqual({
+      name: 'Masjid Al-Noor',
+    });
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe(`http://api.test/v1/invites/${ULID}`);
+    expect(init?.method ?? 'GET').toBe('GET');
+    const headers = new Headers(init?.headers);
+    expect(headers.has('authorization')).toBe(false);
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('throws ApiError with status 410 on a 410 response', async () => {
+    const client = createApiClient({
+      fetch: fakeFetch(json({ error: { code: 'GONE', message: 'Gone' } }, 410)),
+    });
+    const err = await client.previewInvite({ token: ULID }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(410);
+  });
+});
+
+describe('apiClient.acceptInvite', () => {
+  it('sends POST accept with an empty body and the bearer token', async () => {
+    const fetch = fakeFetch(json(community(), 201));
+    const client = createApiClient({ baseUrl: 'http://api.test', fetch });
+
+    await expect(client.acceptInvite({ idToken: 'tok.en.value', token: ULID })).resolves.toEqual(
+      community(),
+    );
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe(`http://api.test/v1/invites/${ULID}/accept`);
+    expect(init?.method).toBe('POST');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok.en.value');
+    expect(JSON.parse(String(init?.body))).toEqual({});
+  });
+});

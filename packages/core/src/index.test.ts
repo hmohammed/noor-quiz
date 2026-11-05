@@ -46,6 +46,12 @@ describe('@noor/core', () => {
     'validateCreateWithOwner',
     'createCommunity',
     'listMyCommunities',
+    'asInviteToken',
+    'inviteUnusable',
+    'validateNewInvite',
+    'createInvite',
+    'previewInvite',
+    'acceptInvite',
   ])('exports %s', (name) => {
     expect(typeof (core as Record<string, unknown>)[name]).toBe('function');
   });
@@ -61,5 +67,12 @@ describe('@noor/core', () => {
     expect(core.COMMUNITY_SCHEMA_VERSION).toBe(1);
     expect(core.MEMBERSHIP_SCHEMA_VERSION).toBe(1);
     expect(core.COMMUNITY_SLUG_SCHEMA_VERSION).toBe(1);
+    expect(core.INVITE_SCHEMA_VERSION).toBe(1);
+    expect(core.INVITE_DEFAULT_EXPIRES_IN_DAYS).toBe(7);
+    expect(core.INVITE_MIN_EXPIRES_IN_DAYS).toBe(1);
+    expect(core.INVITE_MAX_EXPIRES_IN_DAYS).toBe(30);
+    expect(core.INVITE_DEFAULT_MAX_USES).toBe(25);
+    expect(core.INVITE_MIN_MAX_USES).toBe(1);
+    expect(core.INVITE_MAX_MAX_USES).toBe(100);
   });
 });

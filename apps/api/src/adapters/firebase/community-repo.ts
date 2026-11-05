@@ -138,7 +138,7 @@ const communityConverter: FirestoreDataConverter<Community> = {
   },
 };
 
-const membershipConverter: FirestoreDataConverter<Membership> = {
+export const membershipConverter: FirestoreDataConverter<Membership> = {
   toFirestore: (membership) => membershipData(membership as Membership),
   fromFirestore: (snap: QueryDocumentSnapshot) => {
     const parsed = MembershipDoc.safeParse(snap.data());

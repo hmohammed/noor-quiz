@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CreateCommunityRequest, type CommunitySummary, type MeResponse } from '@noor/contracts';
 import { useSession, type Session } from '../auth/session-context';
 import { browserTimeZone } from '../auth/timezone-default';
+import { InviteDialog, type InviteDialogState } from '../invites/InviteDialog';
+import { joinUrl } from '../invites/join-url';
 import {
   CommunitiesView,
   type CommunitiesViewState,
@@ -27,6 +29,18 @@ function initialTimezone(me: MeResponse, zones: readonly string[]): string {
 
 const reloadPage = () => window.location.reload();
 
+type InviteUi =
+  | { kind: 'closed' }
+  | { kind: 'loading'; community: CommunitySummary }
+  | { kind: 'error'; community: CommunitySummary }
+  | {
+      kind: 'ready';
+      community: CommunitySummary;
+      token: string;
+      expiresAt: string;
+      copy: 'idle' | 'copied' | 'failed';
+    };
+
 /** Create a community and list the ones I belong to. Talks to the API only through the session. */
 export function CommunitiesPage() {
   const session = useSession();
@@ -41,6 +55,7 @@ export function CommunitiesPage() {
         timeZones={timeZones}
         createCommunity={session.createCommunity}
         listMyCommunities={session.listMyCommunities}
+        createInvite={session.createInvite}
       />
     );
   }
@@ -72,11 +87,13 @@ function CommunitiesEditor({
   timeZones,
   createCommunity,
   listMyCommunities,
+  createInvite,
 }: {
   me: MeResponse;
   timeZones: readonly string[];
   createCommunity: Session['createCommunity'];
   listMyCommunities: Session['listMyCommunities'];
+  createInvite: Session['createInvite'];
 }) {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
@@ -86,6 +103,16 @@ function CommunitiesEditor({
     timezone: initialTimezone(me, timeZones),
   }));
   const [status, setStatus] = useState<CommunityFormStatus>('idle');
+  const [invite, setInvite] = useState<InviteUi>({ kind: 'closed' });
+  const inviteRequest = useRef(0);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const restoreFocus = useRef(false);
+
+  useEffect(() => {
+    if (invite.kind !== 'closed' || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    openerRef.current?.focus();
+  }, [invite]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,20 +190,101 @@ function CommunitiesEditor({
     );
   };
 
+  function closeInvite() {
+    restoreFocus.current = true;
+    inviteRequest.current += 1;
+    setInvite({ kind: 'closed' });
+  }
+
+  function beginInvite(community: CommunitySummary, opener: HTMLButtonElement) {
+    openerRef.current = opener;
+    const id = inviteRequest.current + 1;
+    inviteRequest.current = id;
+    setInvite({ kind: 'loading', community });
+    createInvite(community.tenantId, {}).then(
+      (res) => {
+        if (inviteRequest.current !== id) return;
+        setInvite({
+          kind: 'ready',
+          community,
+          token: res.token,
+          expiresAt: res.expiresAt,
+          copy: 'idle',
+        });
+      },
+      () => {
+        if (inviteRequest.current !== id) return;
+        setInvite({ kind: 'error', community });
+      },
+    );
+  }
+
+  function openInvite(community: CommunitySummary, opener: HTMLButtonElement) {
+    if (invite.kind !== 'closed') return;
+    beginInvite(community, opener);
+  }
+
+  async function copyLink() {
+    if (invite.kind !== 'ready') return;
+    const url = joinUrl(invite.token, window.location.origin);
+    try {
+      await navigator.clipboard.writeText(url);
+      setInvite({ ...invite, copy: 'copied' });
+    } catch {
+      setInvite({ ...invite, copy: 'failed' });
+    }
+  }
+
+  const dialog: InviteDialogState | null =
+    invite.kind === 'closed'
+      ? null
+      : invite.kind === 'loading'
+        ? { kind: 'loading' }
+        : invite.kind === 'error'
+          ? { kind: 'error' }
+          : {
+              kind: 'ready',
+              url: joinUrl(invite.token, window.location.origin),
+              expiresAt: invite.expiresAt,
+              timeZone: invite.community.timezone,
+              copy: invite.copy,
+            };
+
   return (
-    <CommunitiesView
-      state={{ kind: 'ready', status, values, communities }}
-      timeZones={timeZones}
-      onNameChange={(name) => {
-        setValues((current) => ({ ...current, name }));
-        if (status !== 'saving' && status !== 'list-error') setStatus('idle');
-      }}
-      onTimezoneChange={(timezone) => {
-        setValues((current) => ({ ...current, timezone }));
-        if (status !== 'saving' && status !== 'list-error') setStatus('idle');
-      }}
-      onSubmit={handleSubmit}
-      onRetry={refreshList}
-    />
+    <>
+      <CommunitiesView
+        state={{ kind: 'ready', status, values, communities }}
+        timeZones={timeZones}
+        onNameChange={(name) => {
+          setValues((current) => ({ ...current, name }));
+          if (status !== 'saving' && status !== 'list-error') setStatus('idle');
+        }}
+        onTimezoneChange={(timezone) => {
+          setValues((current) => ({ ...current, timezone }));
+          if (status !== 'saving' && status !== 'list-error') setStatus('idle');
+        }}
+        onSubmit={handleSubmit}
+        onRetry={refreshList}
+        onInvite={openInvite}
+        inviteFor={invite.kind === 'closed' ? undefined : invite.community.tenantId}
+        invitePanel={
+          dialog && invite.kind !== 'closed' ? (
+            <InviteDialog
+              communityName={invite.community.name}
+              state={dialog}
+              onClose={closeInvite}
+              onRetry={() => {
+                const opener = openerRef.current;
+                if (invite.kind !== 'error' || !opener) return;
+                beginInvite(invite.community, opener);
+              }}
+              onCopy={() => {
+                void copyLink();
+              }}
+            />
+          ) : null
+        }
+      />
+    </>
   );
 }

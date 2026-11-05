@@ -6,6 +6,7 @@ import { FakeIdGenerator } from './fake-id-generator';
 import {
   createInMemoryCommunityStore,
   InMemoryCommunityRepo,
+  InMemoryInviteRepo,
   InMemoryMembershipRepo,
 } from './in-memory-community-store';
 import { InMemoryUserRepo } from './in-memory-user-repo';
@@ -29,6 +30,7 @@ describe('makeTestDeps', () => {
     expect(deps.users).toBeInstanceOf(InMemoryUserRepo);
     expect(deps.communities).toBeInstanceOf(InMemoryCommunityRepo);
     expect(deps.memberships).toBeInstanceOf(InMemoryMembershipRepo);
+    expect(deps.invites).toBeInstanceOf(InMemoryInviteRepo);
   });
 
   it('shares one community store between the default repos', async () => {
@@ -54,6 +56,7 @@ describe('makeTestDeps', () => {
     expect(a.users).not.toBe(b.users);
     expect(a.communities).not.toBe(b.communities);
     expect(a.memberships).not.toBe(b.memberships);
+    expect(a.invites).not.toBe(b.invites);
   });
 
   it('uses overriding fakes', () => {
