@@ -6,6 +6,7 @@ import { communitiesRoutes } from './routes/communities';
 import { healthRoutes } from './routes/health';
 import { invitesRoutes } from './routes/invites';
 import { meRoutes } from './routes/me';
+import { questionsRoutes } from './routes/questions';
 import { seasonsRoutes } from './routes/seasons';
 
 /** What the HTTP app is built from: ports for use cases and the build version. */
@@ -31,5 +32,6 @@ export function createApp(root: AppRootInput): Hono<AppEnv> {
   app.route('/', communitiesRoutes());
   app.route('/', invitesRoutes());
   app.route('/', seasonsRoutes());
+  app.route('/', questionsRoutes());
   return app;
 }
