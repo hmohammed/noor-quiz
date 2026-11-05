@@ -110,6 +110,32 @@ const seeds = {
       schemaVersion: 1,
     },
   },
+  questions: {
+    id: '01CCCCCCCCCCCCCCCCCCCCCCCC',
+    data: {
+      id: '01CCCCCCCCCCCCCCCCCCCCCCCC',
+      tenantId: TENANT_ID,
+      type: 'mcq',
+      difficulty: 'beginner',
+      topic: 'fasting',
+      locales: {
+        en: {
+          title: 'The fast',
+          prompt: 'Which verse commands fasting?',
+          choices: ['2:183', '1:1'],
+          explanation: 'Al-Baqarah.',
+        },
+      },
+      answer: { choiceIndex: 0 },
+      sources: [{ kind: 'quran', ref: '2:183' }],
+      reviewStatus: 'draft',
+      reviewNotes: '',
+      authoredBy: ALICE_USER_ID,
+      createdAt: AT,
+      updatedAt: AT,
+      schemaVersion: 1,
+    },
+  },
   seasons: {
     id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
     data: {

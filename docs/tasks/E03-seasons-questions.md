@@ -81,7 +81,10 @@ Skills: `api-endpoint`, `firestore-data`, `question-content`
 
 **Notes**
 
-_(implementer adds notes for the next task here)_
+- `questions/{questionId}` is top-level. `QuestionRepo.get` and `list` take `tenantId` first. `list` is a single-field equality (no composite index); `listQuestions` sorts newest `createdAt`, then `id`.
+- HTTP create and update require 1–8 sources. The adapter still round-trips `sources: []` for T035. Patching that draft fails `assertQuestion` until a source is added.
+- Create always stores `reviewStatus: "draft"`. The response schema also accepts `in_review`, `approved` and `rejected` for T033, and this slice never writes them. `MemberQuestionView` strips `answer` and per-locale `explanation`; these routes return `Question`.
+- Text is trimmed only (no NFC, no collapsed inner spaces). Lengths are Unicode code points.
 
 ## T033
 
