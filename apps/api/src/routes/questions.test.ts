@@ -244,6 +244,8 @@ describe('POST /v1/t/:tenantId/questions', () => {
       reviewStatus: 'draft',
       reviewNotes: '',
       authoredBy: editor.userId,
+      reviewedBy: null,
+      reviewedAt: null,
       tenantId: editor.tenantId,
     });
     expect(created.answer.choiceIndex).toBe(0);
@@ -525,5 +527,276 @@ describe('PATCH /v1/t/:tenantId/questions/:questionId', () => {
       await (await send('GET', questionsPath(editor.tenantId), editor.authorization)).json(),
     );
     expect(listed.questions).toEqual([created]);
+  });
+});
+
+function reviewPath(tenantId: string, questionId: string): string {
+  return `${questionsPath(tenantId, questionId)}/review`;
+}
+
+async function draftQuestion(
+  send: ReturnType<typeof setup>['send'],
+  tenantId: string,
+  authorization: string,
+) {
+  return Question.parse(
+    await (await send('POST', questionsPath(tenantId), authorization, QUESTION)).json(),
+  );
+}
+
+describe('POST /v1/t/:tenantId/questions/:questionId/review', () => {
+  it('lets an editor submit draft or rejected for review and clears audit fields', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+
+    const res = await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+      status: 'in_review',
+      notes: '  please review  ',
+    });
+    expect(res.status).toBe(200);
+    const reviewed = Question.parse(await res.json());
+    expect(reviewed.reviewStatus).toBe('in_review');
+    expect(reviewed.reviewNotes).toBe('please review');
+    expect(reviewed.reviewedBy).toBeNull();
+    expect(reviewed.reviewedAt).toBeNull();
+    expect(reviewed.updatedAt).toBe(created.updatedAt);
+  });
+
+  it.each(['approved', 'rejected'] as const)(
+    'returns 403 FORBIDDEN when an editor requests %s and writes nothing',
+    async (status) => {
+      const { deps, send } = setup();
+      const editor = await asRole(deps, 'editor');
+      const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+      await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+        status: 'in_review',
+        notes: '',
+      });
+      const before = QuestionListResponse.parse(
+        await (await send('GET', questionsPath(editor.tenantId), editor.authorization)).json(),
+      ).questions[0];
+      await expectCode(
+        await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+          status,
+          notes: 'no',
+        }),
+        403,
+        'FORBIDDEN',
+      );
+      const after = QuestionListResponse.parse(
+        await (await send('GET', questionsPath(editor.tenantId), editor.authorization)).json(),
+      ).questions[0];
+      expect(after).toEqual(before);
+    },
+  );
+
+  it('lets a scholar-reviewer approve an in_review question with audit fields from one clock read', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+    await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+      status: 'in_review',
+      notes: '',
+    });
+    const scholar = await signedIn(deps, {
+      subject: 'uid-scholar',
+      email: 'scholar@example.com',
+      name: 'Scholar',
+    });
+    await seedRole(deps, scholar.userId, editor.tenantId, 'scholar-reviewer', created.createdAt);
+    deps.clock.advance({ hours: 2 });
+
+    const res = await send('POST', reviewPath(editor.tenantId, created.id), scholar.authorization, {
+      status: 'approved',
+      notes: 'ok',
+    });
+    expect(res.status).toBe(200);
+    const approved = Question.parse(await res.json());
+    expect(approved.reviewStatus).toBe('approved');
+    expect(approved.reviewedBy).toBe(scholar.userId);
+    expect(approved.reviewedAt).toBe(approved.updatedAt);
+    expect(approved.reviewedAt).toBe('2026-01-01T02:00:00.000Z');
+    expect(approved.reviewNotes).toBe('ok');
+  });
+
+  it('lets a scholar-reviewer reject an in_review question with the same audit fields', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+    await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+      status: 'in_review',
+      notes: '',
+    });
+    const scholar = await signedIn(deps, {
+      subject: 'uid-scholar-2',
+      email: 'scholar2@example.com',
+      name: 'Scholar Two',
+    });
+    await seedRole(deps, scholar.userId, editor.tenantId, 'scholar-reviewer', created.createdAt);
+
+    const rejected = Question.parse(
+      await (
+        await send('POST', reviewPath(editor.tenantId, created.id), scholar.authorization, {
+          status: 'rejected',
+          notes: 'fix source',
+        })
+      ).json(),
+    );
+    expect(rejected.reviewStatus).toBe('rejected');
+    expect(rejected.reviewedBy).toBe(scholar.userId);
+    expect(rejected.reviewedAt).toBe(rejected.updatedAt);
+    expect(rejected.reviewNotes).toBe('fix source');
+  });
+
+  it('returns 403 FORBIDDEN when a scholar-reviewer requests in_review', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+    const scholar = await signedIn(deps, {
+      subject: 'uid-scholar-3',
+      email: 'scholar3@example.com',
+      name: 'Scholar Three',
+    });
+    await seedRole(deps, scholar.userId, editor.tenantId, 'scholar-reviewer', created.createdAt);
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), scholar.authorization, {
+        status: 'in_review',
+        notes: '',
+      }),
+      403,
+      'FORBIDDEN',
+    );
+  });
+
+  it.each(['admin', 'owner'] as const)(
+    'lets an %s approve like a scholar-reviewer',
+    async (role) => {
+      const { deps, send } = setup();
+      const actor = await asRole(deps, role);
+      const created = await draftQuestion(send, actor.tenantId, actor.authorization);
+      await send('POST', reviewPath(actor.tenantId, created.id), actor.authorization, {
+        status: 'in_review',
+        notes: '',
+      });
+      const approved = Question.parse(
+        await (
+          await send('POST', reviewPath(actor.tenantId, created.id), actor.authorization, {
+            status: 'approved',
+            notes: 'ok',
+          })
+        ).json(),
+      );
+      expect(approved.reviewStatus).toBe('approved');
+      expect(approved.reviewedBy).toBe(actor.userId);
+    },
+  );
+
+  it('returns 403 FORBIDDEN for a plain member on the review route', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+    const member = await signedIn(deps, {
+      subject: 'uid-member-review',
+      email: 'member-review@example.com',
+      name: 'Member',
+    });
+    await seedRole(deps, member.userId, editor.tenantId, 'member', created.createdAt);
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), member.authorization, {
+        status: 'in_review',
+        notes: '',
+      }),
+      403,
+      'FORBIDDEN',
+    );
+  });
+
+  it('returns 401 without a token, 403 for another tenant editor, 404/400 for bad ids', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), undefined, {
+        status: 'in_review',
+        notes: '',
+      }),
+      401,
+      'UNAUTHENTICATED',
+    );
+
+    const bob = await signedIn(deps, {
+      subject: 'uid-bob-r',
+      email: 'bob-r@example.com',
+      name: 'Bob',
+    });
+    const bobCommunity = await createCommunity(deps, bob.authorization, 'Bob Review School');
+    await seedRole(deps, bob.userId, bobCommunity.tenantId, 'editor', bobCommunity.createdAt);
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), bob.authorization, {
+        status: 'in_review',
+        notes: '',
+      }),
+      403,
+      'FORBIDDEN',
+    );
+
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, MISSING), editor.authorization, {
+        status: 'in_review',
+        notes: '',
+      }),
+      404,
+      'NOT_FOUND',
+    );
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, 'not-a-ulid'), editor.authorization, {
+        status: 'in_review',
+        notes: '',
+      }),
+      400,
+      'VALIDATION',
+    );
+
+    const other = await draftQuestion(send, bobCommunity.tenantId, bob.authorization);
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, other.id), editor.authorization, {
+        status: 'in_review',
+        notes: '',
+      }),
+      404,
+      'NOT_FOUND',
+    );
+  });
+
+  it('returns 400 VALIDATION for an unknown status, extras, or notes over 2000 code points', async () => {
+    const { deps, send } = setup();
+    const editor = await asRole(deps, 'editor');
+    const created = await draftQuestion(send, editor.tenantId, editor.authorization);
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+        status: 'queued',
+        notes: '',
+      }),
+      400,
+      'VALIDATION',
+    );
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+        status: 'in_review',
+        notes: '',
+        extra: true,
+      }),
+      400,
+      'VALIDATION',
+    );
+    await expectCode(
+      await send('POST', reviewPath(editor.tenantId, created.id), editor.authorization, {
+        status: 'in_review',
+        notes: '🙂'.repeat(2001),
+      }),
+      400,
+      'VALIDATION',
+    );
   });
 });

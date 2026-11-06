@@ -11,6 +11,7 @@ import {
 } from './in-memory-community-store';
 import { InMemoryUserRepo } from './in-memory-user-repo';
 import { InMemoryQuestionRepo } from './in-memory-question-repo';
+import { InMemoryScheduleRepo } from './in-memory-schedule-repo';
 import { InMemorySeasonRepo } from './in-memory-season-repo';
 import { makeTestDeps } from './make-test-deps';
 
@@ -35,6 +36,7 @@ describe('makeTestDeps', () => {
     expect(deps.invites).toBeInstanceOf(InMemoryInviteRepo);
     expect(deps.seasons).toBeInstanceOf(InMemorySeasonRepo);
     expect(deps.questions).toBeInstanceOf(InMemoryQuestionRepo);
+    expect(deps.schedules).toBeInstanceOf(InMemoryScheduleRepo);
   });
 
   it('shares one community store between the default repos', async () => {
@@ -63,6 +65,7 @@ describe('makeTestDeps', () => {
     expect(a.invites).not.toBe(b.invites);
     expect(a.seasons).not.toBe(b.seasons);
     expect(a.questions).not.toBe(b.questions);
+    expect(a.schedules).not.toBe(b.schedules);
   });
 
   it('uses overriding fakes', () => {
@@ -105,5 +108,13 @@ describe('makeTestDeps', () => {
     expect(deps.questions).toBe(questions);
     expect(deps.communities).not.toBe(questions);
     expect(deps.seasons).not.toBe(questions);
+  });
+
+  it('replaces only the schedules repo that was overridden', () => {
+    const schedules = new InMemoryScheduleRepo();
+    const deps = makeTestDeps({ schedules });
+    expect(deps.schedules).toBe(schedules);
+    expect(deps.questions).not.toBe(schedules);
+    expect(deps.seasons).not.toBe(schedules);
   });
 });

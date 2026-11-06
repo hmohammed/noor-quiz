@@ -154,6 +154,19 @@ const seeds = {
       schemaVersion: 1,
     },
   },
+  schedule: {
+    id: '01ARZ3NDEKTSV4RRFFQ69G5FAV_3',
+    data: {
+      id: '01ARZ3NDEKTSV4RRFFQ69G5FAV_3',
+      tenantId: TENANT_ID,
+      seasonId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      dayIndex: 3,
+      questionId: '01CCCCCCCCCCCCCCCCCCCCCCCC',
+      scheduledBy: ALICE_USER_ID,
+      scheduledAt: AT,
+      schemaVersion: 1,
+    },
+  },
 } as const;
 
 type CollectionName = keyof typeof seeds;

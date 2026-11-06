@@ -119,9 +119,21 @@ export type UpdateQuestionRequest = z.infer<typeof UpdateQuestionRequest>;
 export type UpdateQuestionRequestInput = z.input<typeof UpdateQuestionRequest>;
 
 /**
+ * Body of `POST /v1/t/:tenantId/questions/:questionId/review`. `draft` is rejected:
+ * create already writes draft, and this slice has no un-review-to-draft path.
+ */
+export const ReviewQuestionRequest = z.strictObject({
+  status: z.enum(['in_review', 'approved', 'rejected']),
+  notes: trimmedText(0, 2000),
+});
+export type ReviewQuestionRequest = z.infer<typeof ReviewQuestionRequest>;
+export type ReviewQuestionRequestInput = z.input<typeof ReviewQuestionRequest>;
+
+/**
  * One question as an editor sees it. Strict, so `schemaVersion` fails validation and
  * never leaves the server. `sources` may be empty so a later import can return a draft
  * that was stored that way. This slice's write path still requires 1–8 sources.
+ * `reviewedBy` / `reviewedAt` are null until an approve or reject.
  */
 export const Question = z
   .strictObject({
@@ -136,6 +148,8 @@ export const Question = z
     reviewStatus: ReviewStatus,
     reviewNotes: trimmedText(0, 2000),
     authoredBy: Ulid,
+    reviewedBy: Ulid.nullable(),
+    reviewedAt: UtcIso.nullable(),
     createdAt: UtcIso,
     updatedAt: UtcIso,
   })

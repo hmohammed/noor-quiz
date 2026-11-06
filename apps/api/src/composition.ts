@@ -8,6 +8,7 @@ import {
 } from './adapters/firebase/community-repo';
 import { FirestoreInviteRepo } from './adapters/firebase/invite-repo';
 import { FirestoreQuestionRepo } from './adapters/firebase/question-repo';
+import { FirestoreScheduleRepo } from './adapters/firebase/schedule-repo';
 import { FirestoreSeasonRepo } from './adapters/firebase/season-repo';
 import { FirestoreUserRepo } from './adapters/firebase/user-repo';
 import { SystemClock } from './adapters/system/clock';
@@ -42,6 +43,7 @@ export function createComposition(
     invites: new FirestoreInviteRepo(db),
     seasons: new FirestoreSeasonRepo(db),
     questions: new FirestoreQuestionRepo(db),
+    schedules: new FirestoreScheduleRepo(db),
   };
   return { config, deps, version: opts.version };
 }

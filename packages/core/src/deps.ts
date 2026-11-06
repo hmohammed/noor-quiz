@@ -6,6 +6,7 @@ import type {
   InviteRepo,
   MembershipRepo,
   QuestionRepo,
+  ScheduleRepo,
   SeasonRepo,
   UserRepo,
 } from './ports/repos';
@@ -24,4 +25,5 @@ export interface Deps {
   invites: InviteRepo;
   seasons: SeasonRepo;
   questions: QuestionRepo;
+  schedules: ScheduleRepo;
 }

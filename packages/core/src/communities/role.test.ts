@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { UserId } from '../users/user';
-import { canChangeRole, canRemoveMember, ROLES, roleAtLeast, type Role } from './role';
+import {
+  canApproveOrReject,
+  canChangeRole,
+  canRemoveMember,
+  canSubmitForReview,
+  ROLES,
+  roleAtLeast,
+  type Role,
+} from './role';
 
 const SAME = '01ARZ3NDEKTSV4RRFFQ69G5FAV' as UserId;
 const OTHER = '01ARZ3NDEKTSV4RRFFQ69G5FAW' as UserId;
@@ -39,6 +47,28 @@ describe('roleAtLeast', () => {
     for (const min of ROLES) {
       expect(roleAtLeast(role, min as Role)).toBe(false);
     }
+  });
+});
+
+describe('canSubmitForReview', () => {
+  it('is true for editor and above only', () => {
+    expect(canSubmitForReview('member')).toBe(false);
+    expect(canSubmitForReview('scholar-reviewer')).toBe(false);
+    expect(canSubmitForReview('editor')).toBe(true);
+    expect(canSubmitForReview('admin')).toBe(true);
+    expect(canSubmitForReview('owner')).toBe(true);
+    expect(canSubmitForReview('unknown')).toBe(false);
+  });
+});
+
+describe('canApproveOrReject', () => {
+  it('is true for scholar-reviewer, admin and owner, not editor', () => {
+    expect(canApproveOrReject('member')).toBe(false);
+    expect(canApproveOrReject('scholar-reviewer')).toBe(true);
+    expect(canApproveOrReject('editor')).toBe(false);
+    expect(canApproveOrReject('admin')).toBe(true);
+    expect(canApproveOrReject('owner')).toBe(true);
+    expect(canApproveOrReject('unknown')).toBe(false);
   });
 });
 

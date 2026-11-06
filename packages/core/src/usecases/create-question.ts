@@ -38,6 +38,8 @@ export async function createQuestion(
     reviewStatus: 'draft',
     reviewNotes: '',
     authoredBy,
+    reviewedBy: null,
+    reviewedAt: null,
     createdAt: at,
     updatedAt: at,
     schemaVersion: QUESTION_SCHEMA_VERSION,

@@ -10,6 +10,7 @@ import type {
 } from './in-memory-community-store';
 import { InMemoryUserRepo } from './in-memory-user-repo';
 import { InMemoryQuestionRepo } from './in-memory-question-repo';
+import { InMemoryScheduleRepo } from './in-memory-schedule-repo';
 import { InMemorySeasonRepo } from './in-memory-season-repo';
 
 /** Core `Deps` wired with fakes, typed so tests can drive them (e.g. `deps.clock.advance()`). */
@@ -23,14 +24,15 @@ export type TestDeps = Deps & {
   invites: InMemoryInviteRepo;
   seasons: InMemorySeasonRepo;
   questions: InMemoryQuestionRepo;
+  schedules: InMemoryScheduleRepo;
 };
 
 /**
  * Fresh fakes for every port. Pass `overrides` to share or pre-configure a fake.
  * The default `communities`, `memberships` and `invites` share one store. An override
  * replaces that object only; pass the repos from one `createInMemoryCommunityStore()`
- * when they must agree. `seasons` and `questions` are their own stores and are never
- * the community store.
+ * when they must agree. `seasons`, `questions` and `schedules` are their own stores and
+ * are never the community store.
  */
 export function makeTestDeps(overrides: Partial<TestDeps> = {}): TestDeps {
   const store = createInMemoryCommunityStore();
@@ -44,5 +46,6 @@ export function makeTestDeps(overrides: Partial<TestDeps> = {}): TestDeps {
     invites: overrides.invites ?? store.invites,
     seasons: overrides.seasons ?? new InMemorySeasonRepo(),
     questions: overrides.questions ?? new InMemoryQuestionRepo(),
+    schedules: overrides.schedules ?? new InMemoryScheduleRepo(),
   };
 }

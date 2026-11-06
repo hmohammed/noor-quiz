@@ -41,7 +41,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T030](E03-seasons-questions.md#t030) | Season rules in core: days, open and close times | E03 | T003 |  | done | factory |
 | [T031](E03-seasons-questions.md#t031) | Create a season for a community | E03 | T030, T020 |  | done | factory |
 | [T032](E03-seasons-questions.md#t032) | Draft multiple-choice questions | E03 | T031 |  | done | factory |
-| [T033](E03-seasons-questions.md#t033) | Review status and schedule questions to season days | E03 | T032, T022 | sec | todo |  |
+| [T033](E03-seasons-questions.md#t033) | Review status and schedule questions to season days | E03 | T032, T022 | sec | done | factory |
 | [T034](E03-seasons-questions.md#t034) | Today's question for members | E03 | T033 | sec | todo |  |
 | [T040](E04-answering.md#t040) | Answer today's multiple-choice question | E04 | T034 | sec | todo |  |
 

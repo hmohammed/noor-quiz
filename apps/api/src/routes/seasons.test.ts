@@ -14,7 +14,9 @@ import {
   CommunityResponse,
   ErrorResponse,
   MeResponse,
+  Question,
   RamadanSuggestionResponse,
+  ScheduleEntry,
   SeasonListResponse,
   SeasonView,
 } from '@noor/contracts';
@@ -586,5 +588,328 @@ describe('GET /v1/t/:tenantId/seasons/ramadan-suggestion', () => {
       400,
       'VALIDATION',
     );
+  });
+});
+
+const QUESTION = {
+  difficulty: 'beginner',
+  topic: 'fasting',
+  locales: {
+    en: {
+      title: 'The fast',
+      prompt: 'Which verse commands fasting?',
+      choices: ['2:183', '1:1'],
+      explanation: 'Al-Baqarah.',
+    },
+  },
+  answer: { choiceIndex: 0 },
+  sources: [{ kind: 'quran', ref: '2:183' }],
+};
+
+const MISSING = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+function schedulePath(tenantId: string, seasonId: string, dayIndex: string | number): string {
+  return `/v1/t/${tenantId}/seasons/${seasonId}/schedule/${dayIndex}`;
+}
+
+async function createApprovedQuestion(
+  deps: TestDeps,
+  send: ReturnType<typeof setup>['send'],
+  tenantId: string,
+  ownerAuth: string,
+  editorAuth: string,
+) {
+  const created = Question.parse(
+    await (await send('POST', `/v1/t/${tenantId}/questions`, editorAuth, QUESTION)).json(),
+  );
+  await send('POST', `/v1/t/${tenantId}/questions/${created.id}/review`, editorAuth, {
+    status: 'in_review',
+    notes: '',
+  });
+  const approved = Question.parse(
+    await (
+      await send('POST', `/v1/t/${tenantId}/questions/${created.id}/review`, ownerAuth, {
+        status: 'approved',
+        notes: 'ok',
+      })
+    ).json(),
+  );
+  expect(approved.reviewStatus).toBe('approved');
+  return approved;
+}
+
+describe('PUT /v1/t/:tenantId/seasons/:seasonId/schedule/:dayIndex', () => {
+  it('returns 200 for an editor scheduling an approved question and overwrites the same day', async () => {
+    const { deps, send } = setup();
+    const owner = await signedIn(deps);
+    const community = await createCommunity(deps, owner.authorization);
+    const season = SeasonView.parse(
+      await (
+        await send('POST', `/v1/t/${community.tenantId}/seasons`, owner.authorization, SEASON)
+      ).json(),
+    );
+    const editor = await signedIn(deps, {
+      subject: 'uid-editor-sched',
+      email: 'editor-sched@example.com',
+      name: 'Editor',
+    });
+    await seedRole(deps, editor.userId, community.tenantId, 'editor', community.createdAt);
+    const first = await createApprovedQuestion(
+      deps,
+      send,
+      community.tenantId,
+      owner.authorization,
+      editor.authorization,
+    );
+    const second = await createApprovedQuestion(
+      deps,
+      send,
+      community.tenantId,
+      owner.authorization,
+      editor.authorization,
+    );
+
+    const res = await send(
+      'PUT',
+      schedulePath(community.tenantId, season.id, 3),
+      editor.authorization,
+      { questionId: first.id },
+    );
+    expect(res.status).toBe(200);
+    const entry = ScheduleEntry.parse(await res.json());
+    expect(entry).toMatchObject({
+      id: `${season.id}_3`,
+      tenantId: community.tenantId,
+      seasonId: season.id,
+      dayIndex: 3,
+      questionId: first.id,
+      scheduledBy: editor.userId,
+    });
+
+    const replaced = ScheduleEntry.parse(
+      await (
+        await send('PUT', schedulePath(community.tenantId, season.id, 3), editor.authorization, {
+          questionId: second.id,
+        })
+      ).json(),
+    );
+    expect(replaced.questionId).toBe(second.id);
+    expect(deps.schedules.count()).toBe(1);
+  });
+
+  it.each(['draft', 'in_review', 'rejected'] as const)(
+    'returns 409 CONFLICT when scheduling a %s question and writes nothing',
+    async (status) => {
+      const { deps, send } = setup();
+      const owner = await signedIn(deps);
+      const community = await createCommunity(deps, owner.authorization);
+      const season = SeasonView.parse(
+        await (
+          await send('POST', `/v1/t/${community.tenantId}/seasons`, owner.authorization, SEASON)
+        ).json(),
+      );
+      const editor = await signedIn(deps, {
+        subject: `uid-editor-${status}`,
+        email: `${status}@example.com`,
+        name: 'Editor',
+      });
+      await seedRole(deps, editor.userId, community.tenantId, 'editor', community.createdAt);
+      const created = Question.parse(
+        await (
+          await send(
+            'POST',
+            `/v1/t/${community.tenantId}/questions`,
+            editor.authorization,
+            QUESTION,
+          )
+        ).json(),
+      );
+      if (status !== 'draft') {
+        await send(
+          'POST',
+          `/v1/t/${community.tenantId}/questions/${created.id}/review`,
+          editor.authorization,
+          { status: 'in_review', notes: '' },
+        );
+        if (status === 'rejected') {
+          await send(
+            'POST',
+            `/v1/t/${community.tenantId}/questions/${created.id}/review`,
+            owner.authorization,
+            { status: 'rejected', notes: 'no' },
+          );
+        }
+      }
+      await expectCode(
+        await send('PUT', schedulePath(community.tenantId, season.id, 1), editor.authorization, {
+          questionId: created.id,
+        }),
+        409,
+        'CONFLICT',
+      );
+      expect(deps.schedules.count()).toBe(0);
+    },
+  );
+
+  it('returns 409 CONFLICT when the same question is scheduled on a second day', async () => {
+    const { deps, send } = setup();
+    const owner = await signedIn(deps);
+    const community = await createCommunity(deps, owner.authorization);
+    const season = SeasonView.parse(
+      await (
+        await send('POST', `/v1/t/${community.tenantId}/seasons`, owner.authorization, SEASON)
+      ).json(),
+    );
+    const editor = await signedIn(deps, {
+      subject: 'uid-editor-dup',
+      email: 'dup@example.com',
+      name: 'Editor',
+    });
+    await seedRole(deps, editor.userId, community.tenantId, 'editor', community.createdAt);
+    const question = await createApprovedQuestion(
+      deps,
+      send,
+      community.tenantId,
+      owner.authorization,
+      editor.authorization,
+    );
+    const first = ScheduleEntry.parse(
+      await (
+        await send('PUT', schedulePath(community.tenantId, season.id, 1), editor.authorization, {
+          questionId: question.id,
+        })
+      ).json(),
+    );
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, season.id, 2), editor.authorization, {
+        questionId: question.id,
+      }),
+      409,
+      'CONFLICT',
+    );
+    expect(
+      await deps.schedules.get(asTenantId(community.tenantId), asSeasonId(season.id), 1),
+    ).toEqual(expect.objectContaining({ id: first.id, questionId: question.id }));
+    expect(
+      await deps.schedules.get(asTenantId(community.tenantId), asSeasonId(season.id), 2),
+    ).toBeNull();
+  });
+
+  it('returns 401 without a token and 403 for member or scholar-reviewer', async () => {
+    const { deps, send } = setup();
+    const owner = await signedIn(deps);
+    const community = await createCommunity(deps, owner.authorization);
+    const season = SeasonView.parse(
+      await (
+        await send('POST', `/v1/t/${community.tenantId}/seasons`, owner.authorization, SEASON)
+      ).json(),
+    );
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, season.id, 1), undefined, {
+        questionId: MISSING,
+      }),
+      401,
+      'UNAUTHENTICATED',
+    );
+    for (const role of ['member', 'scholar-reviewer'] as const) {
+      const person = await signedIn(deps, {
+        subject: `uid-sched-${role}`,
+        email: `${role}-sched@example.com`,
+        name: 'Person',
+      });
+      await seedRole(deps, person.userId, community.tenantId, role, community.createdAt);
+      await expectCode(
+        await send('PUT', schedulePath(community.tenantId, season.id, 1), person.authorization, {
+          questionId: MISSING,
+        }),
+        403,
+        'FORBIDDEN',
+      );
+    }
+  });
+
+  it('returns 403 for another tenant editor, 404 for missing season/question, 400 for bad ids and dayIndex', async () => {
+    const { deps, send } = setup();
+    const owner = await signedIn(deps);
+    const community = await createCommunity(deps, owner.authorization);
+    const season = SeasonView.parse(
+      await (
+        await send('POST', `/v1/t/${community.tenantId}/seasons`, owner.authorization, {
+          ...SEASON,
+          lengthDays: 10,
+        })
+      ).json(),
+    );
+    const editor = await signedIn(deps, {
+      subject: 'uid-editor-bad',
+      email: 'bad@example.com',
+      name: 'Editor',
+    });
+    await seedRole(deps, editor.userId, community.tenantId, 'editor', community.createdAt);
+    const question = await createApprovedQuestion(
+      deps,
+      send,
+      community.tenantId,
+      owner.authorization,
+      editor.authorization,
+    );
+
+    const bob = await signedIn(deps, {
+      subject: 'uid-bob-s',
+      email: 'bob-s@example.com',
+      name: 'Bob',
+    });
+    const bobCommunity = await createCommunity(deps, bob.authorization, 'Bob Schedule School');
+    await seedRole(deps, bob.userId, bobCommunity.tenantId, 'editor', bobCommunity.createdAt);
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, season.id, 1), bob.authorization, {
+        questionId: question.id,
+      }),
+      403,
+      'FORBIDDEN',
+    );
+
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, MISSING, 1), editor.authorization, {
+        questionId: question.id,
+      }),
+      404,
+      'NOT_FOUND',
+    );
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, season.id, 1), editor.authorization, {
+        questionId: MISSING,
+      }),
+      404,
+      'NOT_FOUND',
+    );
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, 'not-a-ulid', 1), editor.authorization, {
+        questionId: question.id,
+      }),
+      400,
+      'VALIDATION',
+    );
+    await expectCode(
+      await send('PUT', schedulePath(community.tenantId, season.id, 1), editor.authorization, {
+        questionId: 'not-a-ulid',
+      }),
+      400,
+      'VALIDATION',
+    );
+
+    for (const dayIndex of ['0', '-1', '1.5', '11', 'abc']) {
+      await expectCode(
+        await send(
+          'PUT',
+          schedulePath(community.tenantId, season.id, dayIndex),
+          editor.authorization,
+          { questionId: question.id },
+        ),
+        400,
+        'VALIDATION',
+      );
+    }
+    expect(deps.schedules.count()).toBe(0);
   });
 });

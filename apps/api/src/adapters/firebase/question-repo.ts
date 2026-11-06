@@ -85,6 +85,8 @@ const QuestionDoc = z
     reviewStatus: z.enum(REVIEW_STATUSES),
     reviewNotes: text(0, 2000),
     authoredBy: userId,
+    reviewedBy: userId.nullable().optional(),
+    reviewedAt: isoString.nullable().optional(),
     createdAt: isoString,
     updatedAt: isoString,
     schemaVersion: z.literal(QUESTION_SCHEMA_VERSION),
@@ -97,7 +99,12 @@ const QuestionDoc = z
     return (
       present.every((locale) => locale.choices.length === count) && doc.answer.choiceIndex < count
     );
-  }, 'question');
+  }, 'question')
+  .transform((doc) => ({
+    ...doc,
+    reviewedBy: doc.reviewedBy ?? null,
+    reviewedAt: doc.reviewedAt ?? null,
+  }));
 
 function checked(question: Question): Question {
   return copyQuestion({
@@ -105,6 +112,7 @@ function checked(question: Question): Question {
     id: asQuestionId(question.id),
     tenantId: asTenantId(question.tenantId),
     authoredBy: asUserId(question.authoredBy),
+    reviewedBy: question.reviewedBy === null ? null : asUserId(question.reviewedBy),
   });
 }
 

@@ -72,7 +72,8 @@ export interface QuestionSource {
 /**
  * `questions/{questionId}`. `id` equals the document id. `schemaVersion` is 1.
  * `sources` may be empty in storage so a later import can keep a draft; the create
- * and update use cases still require 1–8 sources.
+ * and update use cases still require 1–8 sources. `reviewedBy` / `reviewedAt` are
+ * null until an approve or reject; create always writes null.
  */
 export interface Question {
   id: QuestionId;
@@ -86,6 +87,10 @@ export interface Question {
   reviewStatus: ReviewStatus;
   reviewNotes: string;
   authoredBy: UserId;
+  /** Null until approve/reject. Cleared again when resubmitted for review. */
+  reviewedBy: UserId | null;
+  /** UTC ISO from the Clock on approve/reject; otherwise null. */
+  reviewedAt: string | null;
   /** UTC ISO string from the Clock. */
   createdAt: string;
   /** UTC ISO string from the Clock. Equals `createdAt` on create. */
@@ -118,6 +123,8 @@ export function copyQuestion(question: Question): Question {
     reviewStatus: question.reviewStatus,
     reviewNotes: question.reviewNotes,
     authoredBy: question.authoredBy,
+    reviewedBy: question.reviewedBy,
+    reviewedAt: question.reviewedAt,
     createdAt: question.createdAt,
     updatedAt: question.updatedAt,
     schemaVersion: question.schemaVersion,
