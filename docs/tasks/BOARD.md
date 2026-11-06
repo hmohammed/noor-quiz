@@ -23,7 +23,7 @@ Phases follow the roadmap in [../vision.md](../vision.md#roadmap-and-metrics): g
 | [T003](E00-foundation.md#t003) | Clock port, typed config and domain errors | E00 | T001 |  | done | factory |
 | [T005](E00-foundation.md#t005) | Create Firebase projects and accounts | E00 | — |  | split | human |
 | [T005a](E00-foundation.md#t005a) | Dev Firebase project and GitHub deploy access | E00 | — |  | done | human |
-| [T005b](E00-foundation.md#t005b) | Staging and prod Firebase projects | E00 | T005a |  | todo | human |
+| [T005b](E00-foundation.md#t005b) | Staging and prod Firebase projects | E00 | T005a |  | done | human |
 | [T004](E00-foundation.md#t004) | CI: emulator tests, e2e and auto-deploy to dev | E00 | T002, T005a |  | done | factory |
 | [T010](E01-identity-privacy.md#t010) | Sign in with Google and get my user record | E01 | T002, T003 | sec | done | factory |
 | [T010a](E01-identity-privacy.md#t010a) | Own user and identity records: getOrCreateUser with a transaction | E01 | T002, T003 | sec | done | factory |
