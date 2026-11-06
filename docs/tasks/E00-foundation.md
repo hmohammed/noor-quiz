@@ -200,4 +200,4 @@ Skills: `deploy-release`
 
 **Notes**
 
-_(person fills in project IDs and secret names)_
+Marked done by human (2026-11-06). Project IDs / secret names still to be recorded here when available.
