@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 // tooling/src/<this file> -> repo root is two levels up.
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
-const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
+const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8').replace(/\r\n/g, '\n');
 
 const scripts = Object.keys(
   (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts,

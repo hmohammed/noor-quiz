@@ -100,6 +100,8 @@ describe('createQuestion', () => {
     expect(question.type).toBe('mcq');
     expect(question.reviewStatus).toBe('draft');
     expect(question.reviewNotes).toBe('');
+    expect(question.reviewedBy).toBeNull();
+    expect(question.reviewedAt).toBeNull();
     expect(question.authoredBy).toBe(USER);
     expect(question.tenantId).toBe(TENANT);
     expect(question.id).toBe(QUESTION_ID);

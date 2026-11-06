@@ -4,6 +4,7 @@ import {
   createQuestion,
   DomainError,
   listQuestions,
+  reviewQuestion,
   updateQuestion,
   type Question as StoredQuestion,
 } from '@noor/core';
@@ -11,6 +12,7 @@ import {
   CreateQuestionRequest,
   Question,
   QuestionListResponse,
+  ReviewQuestionRequest,
   UpdateQuestionRequest,
   type Question as QuestionBody,
 } from '@noor/contracts';
@@ -22,10 +24,11 @@ import { requireUser } from '../middleware/require-user';
 
 /** Five locales fit. The season cap of 4096 does not. */
 const MAX_BODY_BYTES = 32768;
+const MAX_REVIEW_BODY_BYTES = 4096;
 
-function limitBody() {
+function limitBody(maxSize = MAX_BODY_BYTES) {
   return bodyLimit({
-    maxSize: MAX_BODY_BYTES,
+    maxSize,
     onError: () => {
       throw new DomainError('VALIDATION', { reason: 'body-too-large' });
     },
@@ -46,12 +49,14 @@ function questionView(question: StoredQuestion): QuestionBody {
     reviewStatus: question.reviewStatus,
     reviewNotes: question.reviewNotes,
     authoredBy: question.authoredBy,
+    reviewedBy: question.reviewedBy,
+    reviewedAt: question.reviewedAt,
     createdAt: question.createdAt,
     updatedAt: question.updatedAt,
   });
 }
 
-/** Draft, list and patch a community's multiple-choice questions. Editor or above. */
+/** Draft, list, patch and review a community's multiple-choice questions. */
 export function questionsRoutes(): Hono<AppEnv> {
   return new Hono<AppEnv>()
     .post(
@@ -94,6 +99,25 @@ export function questionsRoutes(): Hono<AppEnv> {
           tenantId: c.var.membership.tenantId,
           questionId: c.req.param('questionId'),
           patch: body,
+        });
+        return c.json(questionView(question), 200);
+      },
+    )
+    .post(
+      '/v1/t/:tenantId/questions/:questionId/review',
+      limitBody(MAX_REVIEW_BODY_BYTES),
+      requireUser(),
+      requireConsent(),
+      requireMember('scholar-reviewer'),
+      async (c) => {
+        const body = await parseJsonBody(c, ReviewQuestionRequest);
+        const question = await reviewQuestion(c.var.deps, {
+          tenantId: c.var.membership.tenantId,
+          questionId: c.req.param('questionId'),
+          userId: c.var.membership.userId,
+          role: c.var.membership.role,
+          status: body.status,
+          notes: body.notes,
         });
         return c.json(questionView(question), 200);
       },

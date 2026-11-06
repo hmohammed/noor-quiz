@@ -4,6 +4,7 @@ import {
   MemberQuestionView,
   Question,
   QuestionListResponse,
+  ReviewQuestionRequest,
   UpdateQuestionRequest,
 } from './question';
 
@@ -34,6 +35,8 @@ const question = {
   reviewStatus: 'draft' as const,
   reviewNotes: '',
   authoredBy: ULID,
+  reviewedBy: null,
+  reviewedAt: null,
   createdAt: AT,
   updatedAt: AT,
 };
@@ -175,6 +178,33 @@ describe('UpdateQuestionRequest', () => {
   });
 });
 
+describe('ReviewQuestionRequest', () => {
+  it('accepts in_review, approved and rejected with trimmed notes', () => {
+    expect(
+      ReviewQuestionRequest.parse({ status: 'in_review', notes: '  please review  ' }),
+    ).toEqual({ status: 'in_review', notes: 'please review' });
+    expect(ReviewQuestionRequest.parse({ status: 'approved', notes: '' })).toEqual({
+      status: 'approved',
+      notes: '',
+    });
+    expect(ReviewQuestionRequest.parse({ status: 'rejected', notes: 'fix source' })).toEqual({
+      status: 'rejected',
+      notes: 'fix source',
+    });
+  });
+
+  it('rejects draft, unknown status, extras, and notes over 2000 code points', () => {
+    expect(ReviewQuestionRequest.safeParse({ status: 'draft', notes: '' }).success).toBe(false);
+    expect(ReviewQuestionRequest.safeParse({ status: 'queued', notes: '' }).success).toBe(false);
+    expect(
+      ReviewQuestionRequest.safeParse({ status: 'in_review', notes: '', extra: true }).success,
+    ).toBe(false);
+    expect(
+      ReviewQuestionRequest.safeParse({ status: 'in_review', notes: '🙂'.repeat(2001) }).success,
+    ).toBe(false);
+  });
+});
+
 describe('MemberQuestionView', () => {
   it('strips answer and explanation and keeps prompt and choices', () => {
     const view = MemberQuestionView.parse(question);
@@ -183,6 +213,8 @@ describe('MemberQuestionView', () => {
     expect(view).not.toHaveProperty('reviewStatus');
     expect(view).not.toHaveProperty('reviewNotes');
     expect(view).not.toHaveProperty('authoredBy');
+    expect(view).not.toHaveProperty('reviewedBy');
+    expect(view).not.toHaveProperty('reviewedAt');
     expect(view).not.toHaveProperty('createdAt');
     expect(view).not.toHaveProperty('schemaVersion');
     expect(view.locales.en).not.toHaveProperty('explanation');
@@ -202,7 +234,21 @@ describe('Question', () => {
     expect(parsed.answer.choiceIndex).toBe(0);
     expect(parsed.locales.en?.explanation).toBe('Al-Baqarah.');
     expect(parsed.locales.ar?.explanation).toBe('البقرة');
+    expect(parsed.reviewedBy).toBeNull();
+    expect(parsed.reviewedAt).toBeNull();
     expect(parsed).not.toEqual(MemberQuestionView.parse(question));
+  });
+
+  it('accepts null and non-null audit fields after review', () => {
+    expect(
+      Question.parse({
+        ...question,
+        reviewStatus: 'approved',
+        reviewNotes: 'ok',
+        reviewedBy: ULID,
+        reviewedAt: AT,
+      }),
+    ).toMatchObject({ reviewedBy: ULID, reviewedAt: AT });
   });
 
   it('rejects schemaVersion and accepts the later review statuses without writing them here', () => {

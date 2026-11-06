@@ -9,6 +9,7 @@ import type { Role } from '../communities/role';
 import type { Consent } from '../users/consent';
 import type { ProfilePatch } from '../users/profile';
 import type { Question, QuestionId } from '../questions/question';
+import type { ScheduleEntry } from '../schedule/schedule-entry';
 import type { CommunitySeason, SeasonId } from '../season/community-season';
 import type { Identity, IdentityKey, User, UserId } from '../users/user';
 
@@ -214,16 +215,18 @@ export interface SeasonRepo {
  * document; member routes must use `MemberQuestionView`, not this record.
  *
  * `{ id, tenantId, type: "mcq", difficulty, topic, locales, answer: { choiceIndex },
- * sources, reviewStatus, reviewNotes, authoredBy, createdAt, updatedAt, schemaVersion: 1 }`.
- * `locales` is a map of `en` | `sv` | `ar` | `am` | `so` to `{ title, prompt, choices,
- * explanation }`. `sources` is 0–8 `{ kind, ref }` so a later import can store a draft
- * with `sources: []`. On create, `updatedAt` equals `createdAt`. Timestamps and ids are
- * arguments; implementations do not read a clock or mint an id.
+ * sources, reviewStatus, reviewNotes, authoredBy, reviewedBy, reviewedAt, createdAt,
+ * updatedAt, schemaVersion: 1 }`. `reviewedBy` / `reviewedAt` are null until approve or
+ * reject. Absent fields on old docs read as null. `locales` is a map of `en` | `sv` |
+ * `ar` | `am` | `so` to `{ title, prompt, choices, explanation }`. `sources` is 0–8
+ * `{ kind, ref }` so a later import can store a draft with `sources: []`. On create,
+ * `updatedAt` equals `createdAt`. Timestamps and ids are arguments; implementations do
+ * not read a clock or mint an id.
  *
  * `get` returns null when the document is missing or its `tenantId` differs.
  * `create` uses `question.id` as the document id. An existing id is `CONFLICT` and does
  * not overwrite. A non-ULID id, a non-ULID `tenantId`, or `schemaVersion !== 1` is
- * `VALIDATION` and writes nothing. `update` changes content fields only. A missing
+ * `VALIDATION` and writes nothing. `update` may change review fields. A missing
  * document or a tenant mismatch is `NOT_FOUND`. A change to `type`, `authoredBy`,
  * `createdAt` or `schemaVersion` is `VALIDATION`.
  */
@@ -233,4 +236,23 @@ export interface QuestionRepo {
   list(tenantId: TenantId): Promise<Question[]>;
   create(question: Question): Promise<Question>;
   update(question: Question): Promise<Question>;
+}
+
+/**
+ * `schedule/{seasonId}_{dayIndex}` (top-level, flat). No composite index: `listBySeason`
+ * queries `seasonId` equality and filters `tenantId` in the adapter.
+ *
+ * `{ id, tenantId, seasonId, dayIndex, questionId, scheduledBy, scheduledAt,
+ * schemaVersion: 1 }`. `id` is exactly `` `${seasonId}_${dayIndex}` ``. Timestamps and
+ * ids are arguments; implementations do not read a clock.
+ *
+ * `get` returns null when missing or `tenantId` mismatches. `put` upserts by `entry.id`.
+ * A non-ULID tenant/season/question/scheduledBy, a dayIndex outside 1..366, an id that
+ * does not match seasonId_dayIndex, or `schemaVersion !== 1` is `VALIDATION`.
+ */
+export interface ScheduleRepo {
+  get(tenantId: TenantId, seasonId: SeasonId, dayIndex: number): Promise<ScheduleEntry | null>;
+  /** Entries for this season in this tenant. Unsorted. */
+  listBySeason(tenantId: TenantId, seasonId: SeasonId): Promise<ScheduleEntry[]>;
+  put(entry: ScheduleEntry): Promise<ScheduleEntry>;
 }

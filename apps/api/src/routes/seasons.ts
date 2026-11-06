@@ -4,17 +4,22 @@ import {
   createSeason,
   DomainError,
   listSeasons,
+  scheduleQuestion,
   suggestRamadanStart,
   updateSeason,
+  type ScheduleEntry as StoredScheduleEntry,
   type SeasonRecord,
 } from '@noor/core';
 import {
   CreateSeasonRequest,
   RamadanSuggestionResponse,
+  ScheduleEntry,
+  ScheduleQuestionRequest,
   SeasonListResponse,
   SeasonView,
   SuggestRamadanQuery,
   UpdateSeasonRequest,
+  type ScheduleEntry as ScheduleEntryBody,
   type SeasonView as SeasonViewType,
 } from '@noor/contracts';
 import type { AppEnv } from '../app-env';
@@ -32,6 +37,14 @@ function limitBody() {
       throw new DomainError('VALIDATION', { reason: 'body-too-large' });
     },
   });
+}
+
+/** Base-10 integer path segment. Rejects decimals, signs and empty strings. */
+function parseDayIndex(raw: string): number {
+  if (!/^\d+$/.test(raw)) {
+    throw new DomainError('VALIDATION', { reason: 'invalid-day-index' });
+  }
+  return Number(raw);
 }
 
 /** Named fields only, so `createdBy` and `schemaVersion` stay server-side. */
@@ -53,7 +66,19 @@ function seasonView(record: SeasonRecord): SeasonViewType {
   });
 }
 
-/** Create, list and patch a community's seasons, and suggest a Ramadan start. */
+function scheduleView(entry: StoredScheduleEntry): ScheduleEntryBody {
+  return ScheduleEntry.parse({
+    id: entry.id,
+    tenantId: entry.tenantId,
+    seasonId: entry.seasonId,
+    questionId: entry.questionId,
+    dayIndex: entry.dayIndex,
+    scheduledBy: entry.scheduledBy,
+    scheduledAt: entry.scheduledAt,
+  });
+}
+
+/** Create, list and patch a community's seasons, suggest Ramadan, and schedule days. */
 export function seasonsRoutes(): Hono<AppEnv> {
   return new Hono<AppEnv>()
     .post(
@@ -111,6 +136,24 @@ export function seasonsRoutes(): Hono<AppEnv> {
           patch: body,
         });
         return c.json(seasonView(record), 200);
+      },
+    )
+    .put(
+      '/v1/t/:tenantId/seasons/:seasonId/schedule/:dayIndex',
+      limitBody(),
+      requireUser(),
+      requireConsent(),
+      requireMember('editor'),
+      async (c) => {
+        const body = await parseJsonBody(c, ScheduleQuestionRequest);
+        const entry = await scheduleQuestion(c.var.deps, {
+          tenantId: c.var.membership.tenantId,
+          seasonId: c.req.param('seasonId'),
+          dayIndex: parseDayIndex(c.req.param('dayIndex')),
+          questionId: body.questionId,
+          userId: c.var.membership.userId,
+        });
+        return c.json(scheduleView(entry), 200);
       },
     );
 }

@@ -38,6 +38,8 @@ describe('@noor/core', () => {
     'membershipId',
     'isRole',
     'roleAtLeast',
+    'canSubmitForReview',
+    'canApproveOrReject',
     'canChangeRole',
     'canRemoveMember',
     'normaliseCommunityName',
@@ -57,8 +59,12 @@ describe('@noor/core', () => {
     'createQuestion',
     'listQuestions',
     'updateQuestion',
+    'reviewQuestion',
+    'scheduleQuestion',
     'asQuestionId',
     'copyQuestion',
+    'scheduleEntryId',
+    'copyScheduleEntry',
     'isQuestionDifficulty',
     'isSourceKind',
     'isReviewStatus',
@@ -107,5 +113,9 @@ describe('@noor/core', () => {
     expect(core.REVIEW_STATUSES).toEqual(['draft', 'in_review', 'approved', 'rejected']);
     expect(core.QUESTION_TYPES).toEqual(['mcq']);
     expect(core.QUESTION_SCHEMA_VERSION).toBe(1);
+  });
+
+  it('exports the schedule constants', () => {
+    expect(core.SCHEDULE_SCHEMA_VERSION).toBe(1);
   });
 });

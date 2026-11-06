@@ -56,6 +56,8 @@ function question(id: number, tenantId: TenantId, overrides: Partial<Question> =
     reviewStatus: 'draft',
     reviewNotes: '',
     authoredBy: USER_A,
+    reviewedBy: null,
+    reviewedAt: null,
     createdAt: AT,
     updatedAt: AT,
     schemaVersion: QUESTION_SCHEMA_VERSION,
@@ -102,9 +104,11 @@ export function runQuestionRepoContract(makeImpl: () => Promise<QuestionRepoHarn
       expect(await questions.list(ulid(99) as TenantId)).toEqual([]);
     });
 
-    it('updates content fields and keeps id, tenantId, type, authoredBy, createdAt and schemaVersion', async () => {
+    it('updates content and review fields and keeps id, tenantId, type, authoredBy, createdAt and schemaVersion', async () => {
       const { questions } = await makeImpl();
       const created = await questions.create(question(10, TENANT_A));
+      expect(created.reviewedBy).toBeNull();
+      expect(created.reviewedAt).toBeNull();
       const next: Question = {
         ...created,
         difficulty: 'scholar',
@@ -119,7 +123,10 @@ export function runQuestionRepoContract(makeImpl: () => Promise<QuestionRepoHarn
         },
         answer: { choiceIndex: 0 },
         sources: [{ kind: 'hadith', ref: 'Bukhari 527' }],
+        reviewStatus: 'approved',
         reviewNotes: 'wording checked',
+        reviewedBy: USER_B,
+        reviewedAt: LATER,
         updatedAt: LATER,
       };
 
@@ -129,7 +136,8 @@ export function runQuestionRepoContract(makeImpl: () => Promise<QuestionRepoHarn
       expect(updated.id).toBe(created.id);
       expect(updated.tenantId).toBe(created.tenantId);
       expect(updated.type).toBe(created.type);
-      expect(updated.reviewStatus).toBe(created.reviewStatus);
+      expect(updated.reviewedBy).toBe(USER_B);
+      expect(updated.reviewedAt).toBe(LATER);
       expect(updated.authoredBy).toBe(created.authoredBy);
       expect(updated.createdAt).toBe(created.createdAt);
       expect(updated.schemaVersion).toBe(created.schemaVersion);

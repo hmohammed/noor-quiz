@@ -13,8 +13,9 @@ import { toIso } from '../time/instant';
 
 /**
  * Patches editorial fields and runs `assertQuestion` on the merge. Identity fields,
- * `reviewStatus` and `reviewNotes` stay as stored. `updatedAt` is a new clock read.
- * A missing question and another tenant's id are both `NOT_FOUND`.
+ * `reviewStatus`, `reviewNotes`, `reviewedBy` and `reviewedAt` stay as stored.
+ * `updatedAt` is a new clock read. A missing question and another tenant's id are
+ * both `NOT_FOUND`.
  */
 export async function updateQuestion(
   deps: { clock: Clock; questions: QuestionRepo },
@@ -45,6 +46,8 @@ export async function updateQuestion(
     reviewStatus: stored.reviewStatus,
     reviewNotes: stored.reviewNotes,
     authoredBy: stored.authoredBy,
+    reviewedBy: stored.reviewedBy,
+    reviewedAt: stored.reviewedAt,
     createdAt: stored.createdAt,
     updatedAt: toIso(now),
     schemaVersion: QUESTION_SCHEMA_VERSION,

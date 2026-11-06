@@ -20,6 +20,19 @@ export function roleAtLeast(role: string, min: Role): boolean {
   return rank >= ROLES.indexOf(min);
 }
 
+/** Editor, admin or owner may move a question to `in_review`. */
+export function canSubmitForReview(role: string): boolean {
+  return roleAtLeast(role, 'editor');
+}
+
+/**
+ * Scholar-reviewer, admin or owner may approve or reject. Not `roleAtLeast(
+ * 'scholar-reviewer')`, which would also let editors through.
+ */
+export function canApproveOrReject(role: string): boolean {
+  return role === 'scholar-reviewer' || roleAtLeast(role, 'admin');
+}
+
 function rank(role: Role): number {
   return ROLES.indexOf(role);
 }
